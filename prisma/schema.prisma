@@ -1,3 +1,4 @@
+// prisma/schema.prisma
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
@@ -12,4 +13,156 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+/// ========================
+/// USERS & AUTH
+/// ========================
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String   // hashed password
+  role      Role     @default(CUSTOMER)
+  status    UserStatus @default(ACTIVE)
+  phone     String?
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  orders   Order[]
+  ratings  Rating[]
+  cart     Cart?
+}
+
+enum Role {
+  ADMIN
+  CUSTOMER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  DELETED
+}
+
+/// ========================
+/// PRODUCTS & CATEGORIES
+/// ========================
+model Product {
+  id            String        @id @default(uuid())
+  name          String
+  description   String
+  price         Decimal       @db.Decimal(10,2)
+  stock         Int
+  status        ProductStatus @default(ACTIVE)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relations
+  categoryId    String?
+  category      Category?     @relation(fields: [categoryId], references: [id])
+  images        ProductImage[]
+  ratings       Rating[]
+  orderItems    OrderItem[]
+  cartItems     CartItem[]
+
+  // Derived field
+  averageRating Float         @default(0)
+}
+
+enum ProductStatus {
+  ACTIVE       
+  INACTIVE     
+  DISCONTINUED 
+  DELETED
+}
+
+model Category {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  products  Product[]
+}
+
+model ProductImage {
+  id        String   @id @default(uuid())
+  url       String
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+}
+
+/// ========================
+/// CARTS
+/// ========================
+model Cart {
+  id        String      @id @default(uuid())
+  userId    String      @unique
+  user      User        @relation(fields: [userId], references: [id])
+  items     CartItem[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+model CartItem {
+  id        String   @id @default(uuid())
+  cartId    String
+  productId String
+  qty       Int       @default(1)
+
+  cart      Cart     @relation(fields: [cartId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@unique([cartId, productId]) // One entry per product in a cart
+}
+
+/// ========================
+/// ORDERS & ITEMS
+/// ========================
+model Order {
+  id           String      @id @default(uuid())
+  userId       String
+  user         User        @relation(fields: [userId], references: [id])
+  totalPrice   Decimal     @db.Decimal(10,2)
+  status       OrderStatus @default(PENDING)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  items        OrderItem[]
+}
+
+model OrderItem {
+  id        String   @id @default(uuid())
+  orderId   String
+  productId String
+  qty       Int
+  price     Decimal  @db.Decimal(10,2) // snapshot of price at order time
+
+  order     Order    @relation(fields: [orderId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
+}
+
+enum OrderStatus {
+  PENDING
+  COMPLETED
+  CANCELED
+  FAILED
+}
+
+/// ========================
+/// RATINGS & REVIEWS
+/// ========================
+model Rating {
+  id        String   @id @default(uuid())
+  userId    String
+  productId String
+  rating    Int
+  review    String?   
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@unique([userId, productId]) // One rating per user per product
 }
