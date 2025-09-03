@@ -82,6 +82,7 @@ enum ProductStatus {
 model Category {
   id        String    @id @default(uuid())
   name      String    @unique
+  imageUrl  String?  
   products  Product[]
 }
 
