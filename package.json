@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "npx prisma generate && next build --turbopack",
+    "postinstall": "npx prisma generate",
+    "build": "next build --turbopack",
     "start": "next start"
   },
   "dependencies": {
@@ -17,7 +18,6 @@
     "class-variance-authority": "^0.7.1",
     "cloudinary": "^2.7.0",
     "clsx": "^2.1.1",
-    "dotenv": "^17.2.2",
     "formidable": "^3.5.4",
     "lucide-react": "^0.542.0",
     "next": "15.5.2",
