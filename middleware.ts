@@ -13,7 +13,7 @@ export default withAuth(
     if (path.startsWith("/admin")) {
       if (role !== "ADMIN") {
         return NextResponse.redirect(
-          new URL("/auth/sigin?callbackUrl=", req.url)
+          new URL(`/auth/signin?callbackUrl=${encodeURIComponent(req.url)}`, req.url)
         );
       }
     }

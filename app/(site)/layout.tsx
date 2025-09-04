@@ -1,4 +1,6 @@
 // app/layout.tsx
+import Footer from "@/components/common/user/Footer";
+import Navbar from "@/components/common/user/NavBar";
 import type { Metadata } from "next";
 
 
@@ -9,11 +11,9 @@ export default async function UserLayout({
 }) {
   return (
     <>
-      <header className="p-4 bg-blue-600 text-white">
-        <h1>My App Header</h1>
-      </header>
+      <Navbar/>
       <main className="p-6">{children}</main>
-      <footer className="p-4 bg-gray-800 text-white">Footer</footer>
+      <Footer/>
     </>
   );
 }

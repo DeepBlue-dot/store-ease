@@ -1,8 +1,10 @@
 export default function ShopPage() {
-    return (
-        <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-            <h1>Welcome to Store Ease</h1>
-            <p>Gemini 2.0 Flash is now enabled for all clients!</p>
-        </div>
-    );
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen py-2">
+      <h1 className="text-4xl font-bold mb-4">ShopPage</h1>
+      <p className="text-lg text-gray-700">
+        This is the ShopPage of your Next.js application.
+      </p>
+    </div>
+  );
 }
