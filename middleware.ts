@@ -12,7 +12,9 @@ export default withAuth(
     // 🔒 Admin-only area
     if (path.startsWith("/admin")) {
       if (role !== "ADMIN") {
-        return NextResponse.redirect(new URL("/denied", req.url));
+        return NextResponse.redirect(
+          new URL("/auth/sigin?callbackUrl=", req.url)
+        );
       }
     }
 
@@ -24,8 +26,25 @@ export default withAuth(
       path.startsWith("/profile") ||
       path.startsWith("/ratings")
     ) {
-      if (role !== "CUSTOMER" && status !== "ACTIVE") {
-        return NextResponse.redirect(new URL("/denied", req.url));
+      // 👤 Customer-only area
+      if (
+        path.startsWith("/cart") ||
+        path.startsWith("/checkout") ||
+        path.startsWith("/orders") ||
+        path.startsWith("/profile") ||
+        path.startsWith("/ratings")
+      ) {
+        if (role !== "CUSTOMER") {
+          return NextResponse.redirect(
+            new URL("/auth/error?error=AccessDenied", req.url)
+          );
+        }
+
+        if (status !== "ACTIVE") {
+          return NextResponse.redirect(
+            new URL("/auth/error?error=AccountDisabled", req.url)
+          );
+        }
       }
     }
   },
