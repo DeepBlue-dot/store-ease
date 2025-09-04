@@ -2,10 +2,20 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: "Store Ease",
-  description: "Effortlessly manage your store with Store Ease.",
+export const metadata = {
+  title: "StoreEase",
+  description: "A modern e-commerce platform for seamless shopping.",
+  icons: {
+    icon: [
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon.ico", type: "image/x-icon" }
+    ],
+    apple: "/apple-touch-icon.png"
+  },
+  manifest: "/site.webmanifest"
 };
+
 
 export default function RootLayout({
   children,
