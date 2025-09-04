@@ -19,21 +19,67 @@ datasource db {
 /// USERS & AUTH
 /// ========================
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  password  String   // hashed password
-  role      Role     @default(CUSTOMER)
-  status    UserStatus @default(ACTIVE)
-  phone     String?
-  address   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String     @id @default(uuid())
+  name          String?
+  email         String     @unique
+  password      String?
+  role          Role       @default(CUSTOMER)
+  status        UserStatus @default(ACTIVE)
+  phone         String?
+  address       String?
+  image         String?
+  emailVerified DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 
-  // Relations
-  orders   Order[]
-  ratings  Rating[]
-  cart     Cart?
+  // NextAuth relations
+  accounts Account[]
+  sessions Session[]
+
+  // App-specific relations
+  orders  Order[]
+  ratings Rating[]
+  cart    Cart?
+}
+
+model Account {
+  id                String   @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @default(now()) @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
 }
 
 enum Role {
@@ -51,68 +97,68 @@ enum UserStatus {
 /// PRODUCTS & CATEGORIES
 /// ========================
 model Product {
-  id            String        @id @default(uuid())
-  name          String
-  description   String
-  price         Decimal       @db.Decimal(10,2)
-  stock         Int
-  status        ProductStatus @default(ACTIVE)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id          String        @id @default(uuid())
+  name        String
+  description String
+  price       Decimal       @db.Decimal(10, 2)
+  stock       Int
+  status      ProductStatus @default(ACTIVE)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
   // Relations
-  categoryId    String?
-  category      Category?     @relation(fields: [categoryId], references: [id])
-  images        ProductImage[]
-  ratings       Rating[]
-  orderItems    OrderItem[]
-  cartItems     CartItem[]
+  categoryId String?
+  category   Category?      @relation(fields: [categoryId], references: [id])
+  images     ProductImage[]
+  ratings    Rating[]
+  orderItems OrderItem[]
+  cartItems  CartItem[]
 
   // Derived field
-  averageRating Float         @default(0)
+  averageRating Float @default(0)
 }
 
 enum ProductStatus {
-  ACTIVE       
-  INACTIVE     
-  DISCONTINUED 
+  ACTIVE
+  INACTIVE
+  DISCONTINUED
   DELETED
 }
 
 model Category {
-  id        String    @id @default(uuid())
-  name      String    @unique
-  imageUrl  String?  
-  products  Product[]
+  id       String    @id @default(uuid())
+  name     String    @unique
+  imageUrl String?
+  products Product[]
 }
 
 model ProductImage {
-  id        String   @id @default(uuid())
+  id        String  @id @default(uuid())
   url       String
   productId String
-  product   Product  @relation(fields: [productId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
 }
 
 /// ========================
 /// CARTS
 /// ========================
 model Cart {
-  id        String      @id @default(uuid())
-  userId    String      @unique
-  user      User        @relation(fields: [userId], references: [id])
+  id        String     @id @default(uuid())
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id])
   items     CartItem[]
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 }
 
 model CartItem {
-  id        String   @id @default(uuid())
+  id        String @id @default(uuid())
   cartId    String
   productId String
-  qty       Int       @default(1)
+  qty       Int    @default(1)
 
-  cart      Cart     @relation(fields: [cartId], references: [id])
-  product   Product  @relation(fields: [productId], references: [id])
+  cart    Cart    @relation(fields: [cartId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
 
   @@unique([cartId, productId]) // One entry per product in a cart
 }
@@ -121,26 +167,26 @@ model CartItem {
 /// ORDERS & ITEMS
 /// ========================
 model Order {
-  id           String      @id @default(uuid())
-  userId       String
-  user         User        @relation(fields: [userId], references: [id])
-  totalPrice   Decimal     @db.Decimal(10,2)
-  status       OrderStatus @default(PENDING)
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  id         String      @id @default(uuid())
+  userId     String
+  user       User        @relation(fields: [userId], references: [id])
+  totalPrice Decimal     @db.Decimal(10, 2)
+  status     OrderStatus @default(PENDING)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
 
-  items        OrderItem[]
+  items OrderItem[]
 }
 
 model OrderItem {
-  id        String   @id @default(uuid())
+  id        String  @id @default(uuid())
   orderId   String
   productId String
   qty       Int
-  price     Decimal  @db.Decimal(10,2) // snapshot of price at order time
+  price     Decimal @db.Decimal(10, 2) // snapshot of price at order time
 
-  order     Order    @relation(fields: [orderId], references: [id])
-  product   Product  @relation(fields: [productId], references: [id])
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
 }
 
 enum OrderStatus {
@@ -158,12 +204,12 @@ model Rating {
   userId    String
   productId String
   rating    Int
-  review    String?   
+  review    String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user      User     @relation(fields: [userId], references: [id])
-  product   Product  @relation(fields: [productId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
 
   @@unique([userId, productId]) // One rating per user per product
 }
