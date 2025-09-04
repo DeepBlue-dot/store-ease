@@ -44,7 +44,8 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           email: user.email,
           name: user.name,
-          role: user.role, // ✅ include role
+          role: user.role,
+          status: user.status,
         };
       },
     }),
@@ -53,11 +54,29 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
 
-   callbacks: {
+  callbacks: {
+    async signIn({ user }) {
+      // user is either from credentials or Google
+      const dbUser = await prisma.user.findUnique({
+        where: { email: user.email! },
+      });
+
+      if (!dbUser) return false;
+
+      // 🔒 Check status
+      if (dbUser.status !== "ACTIVE") {
+        console.log("Blocked login: user status =", dbUser.status);
+        return false; // ❌ prevents login
+      }
+
+      return true; // ✅ allow login
+    },
+
     async jwt({ token, user }) {
       // When user first logs in
       if (user) {
         token.role = user.role;
+        token.status = user.status;
       }
       return token;
     },
@@ -65,9 +84,17 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.role = token.role as string;
         session.user.id = token.sub as string;
+        session.user.status = token.status as string;
       }
       return session;
     },
+  },
+  pages: {
+    signIn: '/auth/signin',
+    signOut: '/auth/signout',
+    error: '/auth/error', 
+    verifyRequest: '/auth/verify-request',
+    newUser: '/auth/register' 
   },
   secret: process.env.NEXTAUTH_SECRET,
   adapter: PrismaAdapter(prisma),

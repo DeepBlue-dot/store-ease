@@ -7,6 +7,7 @@ export default withAuth(
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
     const role = token?.role;
+    const status = token?.status;
 
     // 🔒 Admin-only area
     if (path.startsWith("/admin")) {
@@ -23,7 +24,7 @@ export default withAuth(
       path.startsWith("/profile") ||
       path.startsWith("/ratings")
     ) {
-      if (role !== "CUSTOMER") {
+      if (role !== "CUSTOMER" && status !== "ACTIVE") {
         return NextResponse.redirect(new URL("/denied", req.url));
       }
     }
