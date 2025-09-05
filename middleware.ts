@@ -10,6 +10,14 @@ const customerPaths = [
   "/ratings",
 ];
 
+const authPages = [
+  "/auth/error",
+  "/auth/forgot-password",
+  "/auth/register",
+  "/auth/signin",
+];
+
+
 // Role-based landing pages
 const roleRedirects: Record<string, string> = {
   ADMIN: "/admin",
@@ -24,7 +32,7 @@ export default withAuth(
     const status = token?.status;
 
     // If user is authenticated and hits /auth/signin, redirect to their dashboard
-    if (path === "/auth/signin" && role && roleRedirects[role]) {
+    if (authPages.includes(path) && role && roleRedirects[role]) {
       return NextResponse.redirect(new URL(roleRedirects[role], req.url));
     }
 
