@@ -1,7 +1,8 @@
 "use client";
+
 import { signIn } from "next-auth/react";
 import { useForm } from "react-hook-form";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 type SignInFormValues = {
   email: string;
@@ -9,51 +10,53 @@ type SignInFormValues = {
 };
 
 export default function SignInForm() {
-  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<SignInFormValues>();
 
-  const onSubmit = async (data: SignInFormValues) => {
-    // prevent default redirect
+  const handleCredentialsSignIn = async (data: SignInFormValues) => {
+    setLoading(true);
+    setErrorMessage(null);
+
+    // Let middleware handle role-based redirects
     const result = await signIn("credentials", {
       email: data.email,
       password: data.password,
-      redirect: false, // important!
+      redirect: true, // <-- allow NextAuth + middleware to redirect automatically
+      callbackUrl: "/", // default fallback
     });
 
-    if (result?.ok) {
-      // fetch session to get user role
-      const session = await fetch("/api/auth/session").then((res) => res.json());
-      if (session?.user?.role === "ADMIN") {
-        router.push("/admin");
-      } else {
-        router.push("/"); // CUSTOMER or default
-      }
-    } else if (result?.error) {
-      alert(result.error); // handle login errors
+    if (result?.error) {
+      setErrorMessage(result.error || "Login failed");
     }
+
+    setLoading(false);
   };
 
   const handleGoogleSignIn = async () => {
-    const result = await signIn("google", { redirect: false });
-    if (result?.ok) {
-      const session = await fetch("/api/auth/session").then((res) => res.json());
-      if (session?.user?.role === "ADMIN") router.push("/admin");
-      else router.push("/");
-    }
+    setLoading(true);
+    setErrorMessage(null);
+
+    await signIn("google", {
+      redirect: true, // middleware will handle role-based redirect
+      callbackUrl: "/", // default fallback
+    });
+
+    setLoading(false);
   };
 
   return (
-    <div className="bg-white shadow-md rounded-lg p-8 w-full max-w-md">
+    <div className="bg-white shadow-md rounded-lg p-8 w-full max-w-md mx-auto">
       <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">
         Sign In
       </h1>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit(handleCredentialsSignIn)} className="space-y-4">
         <div>
           <input
             type="email"
@@ -61,9 +64,7 @@ export default function SignInForm() {
             className="w-full border p-2 rounded"
             {...register("email", { required: "Email is required" })}
           />
-          {errors.email && (
-            <p className="text-sm text-red-500 mt-1">{errors.email.message}</p>
-          )}
+          {errors.email && <p className="text-sm text-red-500 mt-1">{errors.email.message}</p>}
         </div>
 
         <div>
@@ -73,17 +74,17 @@ export default function SignInForm() {
             className="w-full border p-2 rounded"
             {...register("password", { required: "Password is required" })}
           />
-          {errors.password && (
-            <p className="text-sm text-red-500 mt-1">{errors.password.message}</p>
-          )}
+          {errors.password && <p className="text-sm text-red-500 mt-1">{errors.password.message}</p>}
         </div>
+
+        {errorMessage && <p className="text-red-600 mt-2 text-center">{errorMessage}</p>}
 
         <button
           type="submit"
-          disabled={isSubmitting}
-          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
+          disabled={loading}
+          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition disabled:opacity-50"
         >
-          {isSubmitting ? "Signing in..." : "Sign In"}
+          {loading ? "Signing in..." : "Sign In"}
         </button>
       </form>
 
@@ -91,9 +92,15 @@ export default function SignInForm() {
 
       <button
         onClick={handleGoogleSignIn}
-        className="w-full bg-red-500 text-white py-2 rounded hover:bg-red-600 transition"
+        disabled={loading}
+        className="w-full bg-red-500 text-white py-2 rounded hover:bg-red-600 transition disabled:opacity-50 flex items-center justify-center gap-2"
       >
-        Continue with Google
+        <img
+          src="https://developers.google.com/identity/images/g-logo.png"
+          alt="Google logo"
+          className="w-5 h-5"
+        />
+        {loading ? "Signing in..." : "Continue with Google"}
       </button>
     </div>
   );

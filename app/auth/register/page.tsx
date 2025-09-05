@@ -39,13 +39,31 @@ export default function RegisterPage() {
       }
 
       reset();
-      // ✅ Redirect to login page after success
-      router.push("/auth/signin");
+      // Let middleware handle role-based redirects after login
+      await signIn("credentials", {
+        email: data.email,
+        password: data.password,
+        redirect: true, // allow middleware to handle role redirect
+        callbackUrl: "/", // fallback
+      });
     } catch (err: any) {
       setServerError(err.message);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    setServerError(null);
+
+    // Let middleware handle role-based redirects
+    await signIn("google", {
+      redirect: true,
+      callbackUrl: "/", // fallback
+    });
+
+    setLoading(false);
   };
 
   return (
@@ -139,15 +157,16 @@ export default function RegisterPage() {
 
       {/* Google Auth */}
       <button
-        onClick={() => signIn("google", { callbackUrl: "/" })}
-        className="w-full flex items-center justify-center gap-2 border border-gray-300 py-2 rounded hover:bg-gray-100"
+        onClick={handleGoogleSignIn}
+        disabled={loading}
+        className="w-full flex items-center justify-center gap-2 border border-gray-300 py-2 rounded hover:bg-gray-100 disabled:opacity-50"
       >
         <img
           src="https://developers.google.com/identity/images/g-logo.png"
           alt="Google logo"
           className="w-5 h-5"
         />
-        Continue with Google
+        {loading ? "Signing in..." : "Continue with Google"}
       </button>
 
       {/* Server feedback */}

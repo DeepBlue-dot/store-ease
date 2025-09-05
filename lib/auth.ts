@@ -12,7 +12,7 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.AUTH_GOOGLE_ID!,
       clientSecret: process.env.AUTH_GOOGLE_SECRET!,
       httpOptions: {
-        timeout: 50000,
+        timeout: 100000,
       },
     }),
     CredentialsProvider({
