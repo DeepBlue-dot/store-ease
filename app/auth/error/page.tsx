@@ -11,7 +11,8 @@ function ErrorContent() {
   const errorMessages: Record<string, string> = {
     OAuthSignin: "Error while trying to sign in. Please try again.",
     OAuthCallback: "Something went wrong during login. Please retry.",
-    OAuthCreateAccount: "Could not create your account. Please contact support.",
+    OAuthCreateAccount:
+      "Could not create your account. Please contact support.",
     EmailCreateAccount: "We could not send a login email. Try again later.",
     Callback: "Authentication callback failed. Please try again.",
     OAuthAccountNotLinked:
@@ -19,16 +20,22 @@ function ErrorContent() {
     EmailSignin: "Error sending the sign-in email. Please try again.",
     CredentialsSignin: "Invalid credentials. Please check your details.",
     SessionRequired: "You must be signed in to view this page.",
+    AccountDisabled:
+      "Your account has been disabled. Contact support for help.",
+    AccessDenied: "You do not have permission to access this page.",
     default: "Something went wrong. Please try again.",
-    AccountDisabled: "Your account has been disabled. Contact support for help.",
   };
 
-  const message = error ? errorMessages[error] ?? errorMessages.default : errorMessages.default;
+  const message = error
+    ? errorMessages[error] ?? errorMessages.default
+    : errorMessages.default;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50">
       <div className="p-6 bg-white shadow rounded max-w-md text-center">
-        <h1 className="text-xl font-semibold text-red-600">Authentication Error</h1>
+        <h1 className="text-xl font-semibold text-red-600">
+          Authentication Error
+        </h1>
         <p className="mt-2 text-gray-700">{message}</p>
       </div>
     </div>

@@ -1,6 +1,8 @@
 // app/layout.tsx
 import type { Metadata } from "next";
 import "./globals.css";
+import { SessionProvider } from "next-auth/react";
+import { Providers } from "@/hooks/providers";
 
 export const metadata = {
   title: "StoreEase",
@@ -9,13 +11,12 @@ export const metadata = {
     icon: [
       { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
       { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
-      { url: "/favicon.ico", type: "image/x-icon" }
+      { url: "/favicon.ico", type: "image/x-icon" },
     ],
-    apple: "/apple-touch-icon.png"
+    apple: "/apple-touch-icon.png",
   },
-  manifest: "/site.webmanifest"
+  manifest: "/site.webmanifest",
 };
-
 
 export default function RootLayout({
   children,
@@ -25,7 +26,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen bg-gray-50 text-gray-900 antialiased">
-        <main>{children}</main>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

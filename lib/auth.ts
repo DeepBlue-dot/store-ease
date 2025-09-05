@@ -55,18 +55,46 @@ export const authOptions: NextAuthOptions = {
   },
 
   callbacks: {
-    async signIn({ user }) {
-      // user is either from credentials or Google
+    async signIn({ user, account }) {
+      if (!user?.email) return false;
+
+      // 🔎 Find existing user by email
       const dbUser = await prisma.user.findUnique({
-        where: { email: user.email! },
+        where: { email: user.email },
       });
 
-      if (!dbUser) return false;
+      if (!dbUser) {
+        // No user with this email → allow NextAuth to create new user
+        return true;
+      }
 
-      // 🔒 Check status
+      // 🔒 Check status before allowing login
       if (dbUser.status !== "ACTIVE") {
         console.log("Blocked login: user status =", dbUser.status);
-        return false; // ❌ prevents login
+        return false;
+      }
+
+      // 🔗 If OAuth provider is used, link it to the existing user
+      if (account && account.provider !== "credentials") {
+        await prisma.account.upsert({
+          where: {
+            provider_providerAccountId: {
+              provider: account.provider,
+              providerAccountId: account.providerAccountId,
+            },
+          },
+          update: {},
+          create: {
+            userId: dbUser.id,
+            type: account.type,
+            provider: account.provider,
+            providerAccountId: account.providerAccountId,
+            access_token: account.access_token,
+            token_type: account.token_type,
+            scope: account.scope,
+            id_token: account.id_token,
+          },
+        });
       }
 
       return true; // ✅ allow login
@@ -90,11 +118,11 @@ export const authOptions: NextAuthOptions = {
     },
   },
   pages: {
-    signIn: '/auth/signin',
-    signOut: '/auth/signout',
-    error: '/auth/error', 
-    verifyRequest: '/auth/verify-request',
-    newUser: '/auth/register' 
+    signIn: "/auth/signin",
+    signOut: "/auth/signout",
+    error: "/auth/error",
+    verifyRequest: "/auth/verify-request",
+    newUser: "/auth/register",
   },
   secret: process.env.NEXTAUTH_SECRET,
   adapter: PrismaAdapter(prisma),

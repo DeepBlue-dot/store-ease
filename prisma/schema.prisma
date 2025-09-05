@@ -126,10 +126,12 @@ enum ProductStatus {
 }
 
 model Category {
-  id       String    @id @default(uuid())
-  name     String    @unique
-  imageUrl String?
-  products Product[]
+  id        String    @id @default(uuid())
+  name      String    @unique
+  imageUrl  String?
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt @default(now())
 }
 
 model ProductImage {
@@ -137,6 +139,7 @@ model ProductImage {
   url       String
   productId String
   product   Product @relation(fields: [productId], references: [id])
+  createdAt DateTime @default(now())
 }
 
 /// ========================
@@ -159,6 +162,7 @@ model CartItem {
 
   cart    Cart    @relation(fields: [cartId], references: [id])
   product Product @relation(fields: [productId], references: [id])
+  createdAt DateTime @default(now())
 
   @@unique([cartId, productId]) // One entry per product in a cart
 }
@@ -184,6 +188,7 @@ model OrderItem {
   productId String
   qty       Int
   price     Decimal @db.Decimal(10, 2) // snapshot of price at order time
+  createdAt DateTime @default(now())
 
   order   Order   @relation(fields: [orderId], references: [id])
   product Product @relation(fields: [productId], references: [id])
