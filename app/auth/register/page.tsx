@@ -39,12 +39,8 @@ export default function RegisterPage() {
       }
 
       reset();
-
-      // ✅ Let NextAuth handle redirect to login and then role-based routing
-      signIn("credentials", {
-        redirect: true,
-        callbackUrl: "/auth/signin", // user will land here first
-      });
+      // ✅ Redirect to login page after success
+      router.push("/auth/signin");
     } catch (err: any) {
       setServerError(err.message);
     } finally {
