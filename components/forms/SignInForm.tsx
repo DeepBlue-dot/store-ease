@@ -1,7 +1,7 @@
 "use client";
 import { signIn } from "next-auth/react";
-import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
+import { useRouter } from "next/navigation";
 
 type SignInFormValues = {
   email: string;
@@ -9,8 +9,7 @@ type SignInFormValues = {
 };
 
 export default function SignInForm() {
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const router = useRouter();
 
   const {
     register,
@@ -19,11 +18,33 @@ export default function SignInForm() {
   } = useForm<SignInFormValues>();
 
   const onSubmit = async (data: SignInFormValues) => {
-    await signIn("credentials", {
+    // prevent default redirect
+    const result = await signIn("credentials", {
       email: data.email,
       password: data.password,
-      callbackUrl,
+      redirect: false, // important!
     });
+
+    if (result?.ok) {
+      // fetch session to get user role
+      const session = await fetch("/api/auth/session").then((res) => res.json());
+      if (session?.user?.role === "ADMIN") {
+        router.push("/admin");
+      } else {
+        router.push("/"); // CUSTOMER or default
+      }
+    } else if (result?.error) {
+      alert(result.error); // handle login errors
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    const result = await signIn("google", { redirect: false });
+    if (result?.ok) {
+      const session = await fetch("/api/auth/session").then((res) => res.json());
+      if (session?.user?.role === "ADMIN") router.push("/admin");
+      else router.push("/");
+    }
   };
 
   return (
@@ -31,6 +52,7 @@ export default function SignInForm() {
       <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">
         Sign In
       </h1>
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
           <input
@@ -40,11 +62,10 @@ export default function SignInForm() {
             {...register("email", { required: "Email is required" })}
           />
           {errors.email && (
-            <p className="text-sm text-red-500 mt-1">
-              {errors.email.message}
-            </p>
+            <p className="text-sm text-red-500 mt-1">{errors.email.message}</p>
           )}
         </div>
+
         <div>
           <input
             type="password"
@@ -53,11 +74,10 @@ export default function SignInForm() {
             {...register("password", { required: "Password is required" })}
           />
           {errors.password && (
-            <p className="text-sm text-red-500 mt-1">
-              {errors.password.message}
-            </p>
+            <p className="text-sm text-red-500 mt-1">{errors.password.message}</p>
           )}
         </div>
+
         <button
           type="submit"
           disabled={isSubmitting}
@@ -66,9 +86,11 @@ export default function SignInForm() {
           {isSubmitting ? "Signing in..." : "Sign In"}
         </button>
       </form>
+
       <div className="my-6 border-t border-gray-300"></div>
+
       <button
-        onClick={() => signIn("google", { callbackUrl })}
+        onClick={handleGoogleSignIn}
         className="w-full bg-red-500 text-white py-2 rounded hover:bg-red-600 transition"
       >
         Continue with Google
