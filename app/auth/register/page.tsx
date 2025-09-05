@@ -60,7 +60,7 @@ export default function RegisterPage() {
     // Let middleware handle role-based redirects
     await signIn("google", {
       redirect: true,
-      callbackUrl: "/", // fallback
+      callbackUrl: "/auth/signin", 
     });
 
     setLoading(false);
