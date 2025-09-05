@@ -40,7 +40,7 @@ export default function RegisterPage() {
 
       reset();
       // ✅ Redirect to login page after success
-      router.push("/login");
+      router.push("/auth/signin");
     } catch (err: any) {
       setServerError(err.message);
     } finally {

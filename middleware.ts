@@ -9,20 +9,6 @@ export default withAuth(
     const role = token?.role;
     const status = token?.status;
 
-    // 🚫 Redirect logged-in users away from *auth* pages (except signout + verify-request)
-    if (
-      token &&
-      (path.startsWith("/auth/signin") ||
-        path.startsWith("/auth/register") ||
-        path.startsWith("/auth/forgot-password") ||
-        path.startsWith("/auth/error"))
-    ) {
-      if (role === "ADMIN") {
-        return NextResponse.redirect(new URL("/admin", req.url));
-      } else if (role === "CUSTOMER" && status === "ACTIVE") {
-        return NextResponse.redirect(new URL("/", req.url));
-      }
-    }
 
     // 🔒 Admin-only area
     if (path.startsWith("/admin")) {
@@ -43,6 +29,7 @@ export default withAuth(
       path.startsWith("/orders") ||
       path.startsWith("/profile") ||
       path.startsWith("/ratings")
+      && !path.startsWith("/auth")
     ) {
       if (role !== "CUSTOMER") {
         return NextResponse.redirect(
@@ -66,7 +53,6 @@ export default withAuth(
 
 export const config = {
   matcher: [
-    "/admin/:path*",
     "/cart/:path*",
     "/checkout/:path*",
     "/orders/:path*",

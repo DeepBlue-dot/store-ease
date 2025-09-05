@@ -1,8 +1,7 @@
 "use client";
 
-import { signIn, useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { signIn } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 
 type SignInFormValues = {
@@ -11,19 +10,9 @@ type SignInFormValues = {
 };
 
 export default function SignInPage() {
-  const { data: session } = useSession();
   const router = useRouter();
-
-  // 🚀 Redirect after login
-  useEffect(() => {
-    if (session?.user) {
-      if (session.user.role === "ADMIN") {
-        router.push("/admin");
-      } else {
-        router.push("/");
-      }
-    }
-  }, [session, router]);
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
 
   const {
     register,
@@ -35,7 +24,7 @@ export default function SignInPage() {
     await signIn("credentials", {
       email: data.email,
       password: data.password,
-      redirect: false, // prevent auto redirect
+      callbackUrl,
     });
   };
 
@@ -90,7 +79,7 @@ export default function SignInPage() {
 
         {/* Google Sign-In */}
         <button
-          onClick={() => signIn("google", { redirect: false })}
+          onClick={() => signIn("google", { callbackUrl })}
           className="w-full bg-red-500 text-white py-2 rounded hover:bg-red-600 transition"
         >
           Continue with Google
