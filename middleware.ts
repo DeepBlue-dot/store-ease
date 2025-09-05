@@ -13,7 +13,7 @@ const customerPaths = [
 // Role-based landing pages
 const roleRedirects: Record<string, string> = {
   ADMIN: "/admin",
-  CUSTOMER: "/profile",
+  CUSTOMER: "/",
 };
 
 export default withAuth(

@@ -157,6 +157,7 @@ export default function RegisterPage() {
 
       {/* Google Auth */}
       <button
+        type="button" // ← important
         onClick={handleGoogleSignIn}
         disabled={loading}
         className="w-full flex items-center justify-center gap-2 border border-gray-300 py-2 rounded hover:bg-gray-100 disabled:opacity-50"
