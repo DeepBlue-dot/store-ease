@@ -8,10 +8,17 @@ import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { registerSchema, RegisterInput } from "@/lib/validators/user";
 
+import {
+  Card,
+  CardContent,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+
 export default function RegisterForm() {
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
-
   const router = useRouter();
 
   const {
@@ -44,7 +51,7 @@ export default function RegisterForm() {
         email: data.email,
         password: data.password,
         redirect: true,
-        callbackUrl: "/", // fallback
+        callbackUrl: "/",
       });
     } catch (err: any) {
       setServerError(err.message);
@@ -59,143 +66,133 @@ export default function RegisterForm() {
 
     await signIn("google", {
       redirect: true,
-      callbackUrl: "/", 
+      callbackUrl: "/",
     });
 
     setLoading(false);
   };
 
   return (
-    <div className="max-w-md mx-auto p-8 bg-white shadow-lg rounded-2xl border border-gray-100">
-      <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">
-        Create an account
-      </h1>
+    <Card className="w-full max-w-md mx-auto p-6 shadow-lg border border-gray-100 rounded-2xl">
+      <CardContent className="space-y-6">
+        <h1 className="text-3xl font-bold text-center text-gray-800">
+          Create an account
+        </h1>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-        {/* Name */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Name
-          </label>
-          <input
-            {...register("name")}
-            className="w-full border rounded-lg px-3 py-2 mt-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            placeholder="John Doe"
-          />
-          {errors.name && (
-            <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>
-          )}
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 text-gray-800">
+          {/* Name */}
+          <div className="space-y-1">
+            <Label htmlFor="name">Name</Label>
+            <Input
+              id="name"
+              placeholder="John Doe"
+              {...register("name")}
+              className={errors.name ? "border-red-500" : ""}
+            />
+            {errors.name && (
+              <p className="text-red-500 text-sm">{errors.name.message}</p>
+            )}
+          </div>
+
+          {/* Email */}
+          <div className="space-y-1">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="example@email.com"
+              {...register("email")}
+              className={errors.email ? "border-red-500" : ""}
+            />
+            {errors.email && (
+              <p className="text-red-500 text-sm">{errors.email.message}</p>
+            )}
+          </div>
+
+          {/* Password */}
+          <div className="space-y-1">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="********"
+              {...register("password")}
+              className={errors.password ? "border-red-500" : ""}
+            />
+            {errors.password && (
+              <p className="text-red-500 text-sm">{errors.password.message}</p>
+            )}
+          </div>
+
+          {/* Phone */}
+          <div className="space-y-1">
+            <Label htmlFor="phone">Phone</Label>
+            <Input
+              id="phone"
+              placeholder="+123456789"
+              {...register("phone")}
+              className={errors.phone ? "border-red-500" : ""}
+            />
+            {errors.phone && (
+              <p className="text-red-500 text-sm">{errors.phone.message}</p>
+            )}
+          </div>
+
+          {/* Address */}
+          <div className="space-y-1">
+            <Label htmlFor="address">Address</Label>
+            <Input
+              id="address"
+              placeholder="123 Main St"
+              {...register("address")}
+              className={errors.address ? "border-red-500" : ""}
+            />
+            {errors.address && (
+              <p className="text-red-500 text-sm">{errors.address.message}</p>
+            )}
+          </div>
+
+          {/* Submit */}
+          <Button variant="outline" type="submit" className="w-full text-zinc-200" disabled={loading}>
+            {loading ? "Registering..." : "Register"}
+          </Button>
+        </form>
+
+        {/* Divider */}
+        <div className="flex items-center gap-2 my-4">
+          <hr className="flex-1 border-gray-300" />
+          <span className="text-gray-500 text-sm">or</span>
+          <hr className="flex-1 border-gray-300" />
         </div>
 
-        {/* Email */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Email
-          </label>
-          <input
-            {...register("email")}
-            type="email"
-            className="w-full border rounded-lg px-3 py-2 mt-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            placeholder="example@email.com"
-          />
-          {errors.email && (
-            <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
-          )}
-        </div>
-
-        {/* Password */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Password
-          </label>
-          <input
-            {...register("password")}
-            type="password"
-            className="w-full border rounded-lg px-3 py-2 mt-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            placeholder="********"
-          />
-          {errors.password && (
-            <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
-          )}
-        </div>
-
-        {/* Phone */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Phone
-          </label>
-          <input
-            {...register("phone")}
-            className="w-full border rounded-lg px-3 py-2 mt-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            placeholder="+123456789"
-          />
-          {errors.phone && (
-            <p className="text-red-500 text-sm mt-1">{errors.phone.message}</p>
-          )}
-        </div>
-
-        {/* Address */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Address
-          </label>
-          <input
-            {...register("address")}
-            className="w-full border rounded-lg px-3 py-2 mt-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            placeholder="123 Main St"
-          />
-          {errors.address && (
-            <p className="text-red-500 text-sm mt-1">{errors.address.message}</p>
-          )}
-        </div>
-
-        {/* Submit */}
-        <button
-          type="submit"
+        {/* Google Sign In */}
+        <Button
+          variant="outline"
+          className="w-full flex items-center justify-center gap-2"
+          onClick={handleGoogleSignIn}
           disabled={loading}
-          className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50"
         >
-          {loading ? "Registering..." : "Register"}
-        </button>
-      </form>
+          <img
+            src="https://developers.google.com/identity/images/g-logo.png"
+            alt="Google logo"
+            className="w-5 h-5"
+          />
+          {loading ? "Signing in..." : "Continue with Google"}
+        </Button>
 
-      {/* Divider */}
-      <div className="my-6 flex items-center">
-        <hr className="flex-1 border-gray-300" />
-        <span className="px-2 text-gray-500 text-sm">or</span>
-        <hr className="flex-1 border-gray-300" />
-      </div>
+        {/* Server error */}
+        {serverError && (
+          <p className="text-red-600 font-medium text-center">{serverError}</p>
+        )}
 
-      {/* Google Auth */}
-      <button
-        type="button"
-        onClick={handleGoogleSignIn}
-        disabled={loading}
-        className="w-full flex items-center justify-center gap-2 border border-gray-300 py-2 rounded-lg hover:bg-gray-50 transition disabled:opacity-50"
-      >
-        <img
-          src="https://developers.google.com/identity/images/g-logo.png"
-          alt="Google logo"
-          className="w-5 h-5"
-        />
-        {loading ? "Signing in..." : "Continue with Google"}
-      </button>
-
-      {/* Server feedback */}
-      {serverError && (
-        <p className="mt-4 text-red-600 font-medium text-center">{serverError}</p>
-      )}
-
-      {/* Footer link */}
-      <p className="mt-6 text-center text-sm text-gray-600">
-        Already have an account?{" "}
-        <Link
-          href="/auth/signin"
-          className="text-blue-600 hover:underline font-medium"
-        >
-          Sign in
-        </Link>
-      </p>
-    </div>
+        {/* Footer link */}
+        <p className="text-center text-sm text-gray-600">
+          Already have an account?{" "}
+          <Link href="/auth/signin" className="text-blue-600 hover:underline">
+            Sign in
+          </Link>
+        </p>
+      </CardContent>
+    </Card>
   );
 }

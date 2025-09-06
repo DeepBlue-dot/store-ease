@@ -1,14 +1,27 @@
 import Image from "next/image";
+import Link from "next/link";
+import { Home } from "lucide-react"; // Make sure lucide-react is installed
+import { Button } from "@/components/ui/button";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen grid grid-cols-1 lg:grid-cols-[1fr_2fr]">
+    <div className="min-h-screen grid grid-cols-1 lg:grid-cols-[1fr_2fr] relative">
+      {/* Home link */}
+      <div className="absolute top-6 left-6">
+        <Link href="/">
+          <Button variant="ghost" className="flex items-center gap-2 px-3 py-2">
+            <Home className="w-4 h-4" />
+            Home
+          </Button>
+        </Link>
+      </div>
+
       {/* Left side (Logo + Description) */}
       <div className="hidden lg:flex flex-col justify-center items-center bg-blue-600 text-white">
         <div className="flex flex-col items-center text-center ">
           {/* Logo */}
           <Image
-            src="/favicon.png" // replace with your logo path
+            src="/logo.png" // replace with your logo path
             alt="App Logo"
             width={80}
             height={80}
