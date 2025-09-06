@@ -47,160 +47,104 @@ async function main() {
     },
   ];
 
+  // Add 10 more fake customers
+  for (let i = 0; i < 10; i++) {
+    usersData.push({
+      name: faker.person.fullName(),
+      email: faker.internet.email(),
+      password: await bcrypt.hash("password123", 10),
+      role: "CUSTOMER" as const,
+      phone: faker.phone.number(),
+      address: faker.location.streetAddress(),
+    });
+  }
+
   await prisma.user.createMany({ data: usersData, skipDuplicates: true });
-  const [admin, customer1, customer2] = await prisma.user.findMany({
-    orderBy: { createdAt: "asc" },
-    take: 3,
-  });
+  const users = await prisma.user.findMany();
 
-  // --- BASE CATEGORIES ---
-  await prisma.category.createMany({
-    data: [
-      { name: "Electronics" },
-      { name: "Clothing" },
-      { name: "Home & Kitchen" },
-    ],
-    skipDuplicates: true,
-  });
-
-  const [electronics, clothing, kitchen] = await prisma.category.findMany({
-    orderBy: { createdAt: "asc" },
-    take: 3,
-  });
-
-  // --- CURATED PRODUCTS ---
-  // --- CURATED PRODUCTS ---
-  const curatedProductsData = [
-    {
-      name: "Wireless Headphones",
-      description: "Noise-cancelling headphones with 20h battery life",
-      price: new Prisma.Decimal("99.99"),
-      stock: 50,
-      categoryId: electronics.id,
-      images: {
-        create: [{ url: "https://via.placeholder.com/300?text=Headphones" }],
-      },
-    },
-    {
-      name: "Smartphone",
-      description: "Latest-gen smartphone with 128GB storage",
-      price: new Prisma.Decimal("699.99"),
-      stock: 30,
-      categoryId: electronics.id,
-      images: {
-        create: [{ url: "https://via.placeholder.com/300?text=Smartphone" }],
-      },
-    },
-    {
-      name: "Denim Jacket",
-      description: "Stylish denim jacket for all seasons",
-      price: new Prisma.Decimal("59.99"),
-      stock: 20,
-      categoryId: clothing.id,
-      images: {
-        create: [{ url: "https://via.placeholder.com/300?text=Denim+Jacket" }],
-      },
-    },
-    {
-      name: "Blender",
-      description: "High-power blender for smoothies and sauces",
-      price: new Prisma.Decimal("39.99"),
-      stock: 15,
-      categoryId: kitchen.id,
-      images: {
-        create: [{ url: "https://via.placeholder.com/300?text=Blender" }],
-      },
-    },
+  // --- CATEGORIES ---
+  const categoryNames = [
+    "Electronics", "Clothing", "Home & Kitchen", "Books", 
+    "Sports & Outdoors", "Beauty & Personal Care", "Toys & Games",
+    "Automotive", "Health & Household", "Jewelry", "Furniture",
+    "Grocery", "Patio & Garden", "Tools & Home Improvement"
   ];
 
-  for (const product of curatedProductsData) {
-    const existing = await prisma.product.findFirst({
-      where: { name: product.name },
-    });
+  const categoriesData = categoryNames.map(name => ({
+    name,
+    imageUrl: faker.image.urlLoremFlickr({ category: "shopping" })
+  }));
 
-    if (!existing) {
-      await prisma.product.create({ data: product });
+  await prisma.category.createMany({ 
+    data: categoriesData, 
+    skipDuplicates: true 
+  });
+  const categories = await prisma.category.findMany();
+
+  // --- PRODUCTS ---
+  const productsData = [];
+  for (let i = 0; i < 100; i++) {
+    const category = faker.helpers.arrayElement(categories);
+    
+    productsData.push({
+      name: faker.commerce.productName(),
+      description: faker.commerce.productDescription(),
+      price: new Prisma.Decimal(faker.commerce.price({ min: 5, max: 1000 })),
+      stock: faker.number.int({ min: 0, max: 200 }),
+      categoryId: category.id,
+      images: {
+        create: Array.from({ length: faker.number.int({ min: 1, max: 4 }) }, () => ({
+          url: faker.image.urlLoremFlickr({
+            category: "product",
+            width: 400,
+            height: 400,
+          }),
+        })),
+      },
+    });
+  }
+
+  // Create products one by one to handle relations
+  for (const product of productsData) {
+    await prisma.product.create({ data: product });
+  }
+
+  const products = await prisma.product.findMany();
+
+  // --- CARTS ---
+  for (const user of users.filter(u => u.role === "CUSTOMER")) {
+    const cartItems = faker.helpers
+      .arrayElements(products, { min: 0, max: 5 })
+      .map(product => ({
+        productId: product.id,
+        qty: faker.number.int({ min: 1, max: 3 }),
+      }));
+
+    if (cartItems.length > 0) {
+      await prisma.cart.upsert({
+        where: { userId: user.id },
+        update: {},
+        create: {
+          userId: user.id,
+          items: { create: cartItems },
+        },
+      });
     }
   }
 
-  // --- EXTRA FAKE CATEGORIES ---
-  for (let i = 0; i < 5; i++) {
-    await prisma.category.create({
-      data: {
-        name: faker.commerce.department() + " " + faker.word.noun(),
-        imageUrl: faker.image.urlLoremFlickr({ category: "store" }),
-      },
-    });
-  }
-
-  const categories = await prisma.category.findMany();
-
-  // --- EXTRA FAKE PRODUCTS ---
-  for (let i = 0; i < 20; i++) {
-    const category = faker.helpers.arrayElement(categories);
-
-    await prisma.product.create({
-      data: {
-        name: faker.commerce.productName(),
-        description: faker.commerce.productDescription(),
-        price: new Prisma.Decimal(faker.commerce.price({ min: 10, max: 500 })),
-        stock: faker.number.int({ min: 5, max: 100 }),
-        categoryId: category.id,
-        images: {
-          create: [
-            {
-              url: faker.image.urlLoremFlickr({
-                category: "product",
-                width: 300,
-                height: 300,
-              }),
-            },
-          ],
-        },
-      },
-    });
-  }
-
-  const allProducts = await prisma.product.findMany();
-
-  // --- CARTS ---
-  await prisma.cart.upsert({
-    where: { userId: customer1.id },
-    update: {},
-    create: {
-      userId: customer1.id,
-      items: {
-        create: [
-          { productId: allProducts[0].id, qty: 1 },
-          { productId: allProducts[2].id, qty: 2 },
-        ],
-      },
-    },
-  });
-
-  await prisma.cart.upsert({
-    where: { userId: customer2.id },
-    update: {},
-    create: {
-      userId: customer2.id,
-      items: {
-        create: [{ productId: allProducts[1].id, qty: 1 }],
-      },
-    },
-  });
-
-  // --- FAKE ORDERS ---
-  for (const user of [customer1, customer2]) {
-    for (let i = 0; i < 3; i++) {
+  // --- ORDERS ---
+  const orderStatuses = ["PENDING", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"];
+  
+  for (const user of users.filter(u => u.role === "CUSTOMER")) {
+    const orderCount = faker.number.int({ min: 1, max: 8 });
+    
+    for (let i = 0; i < orderCount; i++) {
       const orderItems = faker.helpers
-        .arrayElements(allProducts, {
-          min: 1,
-          max: 3,
-        })
-        .map((p) => ({
-          productId: p.id,
+        .arrayElements(products, { min: 1, max: 5 })
+        .map(product => ({
+          productId: product.id,
           qty: faker.number.int({ min: 1, max: 3 }),
-          price: p.price,
+          price: product.price,
         }));
 
       const total = orderItems.reduce(
@@ -211,37 +155,37 @@ async function main() {
       await prisma.order.create({
         data: {
           userId: user.id,
-          status: faker.helpers.arrayElement(["PENDING", "COMPLETED"]),
+          status: faker.helpers.arrayElement(orderStatuses),
           totalPrice: total,
           items: { create: orderItems },
+          createdAt: faker.date.past({ years: 1 }),
         },
       });
     }
   }
 
   // --- RATINGS ---
-  const customers = await prisma.user.findMany({
-    where: { role: "CUSTOMER" },
-  });
-
-  for (const product of allProducts) {
-    for (const customer of faker.helpers.arrayElements(customers, {
-      min: 1,
-      max: 3,
-    })) {
+  for (const product of products) {
+    const ratingCount = faker.number.int({ min: 3, max: 15 });
+    const customerUsers = users.filter(u => u.role === "CUSTOMER");
+    
+    for (let i = 0; i < ratingCount; i++) {
+      const customer = faker.helpers.arrayElement(customerUsers);
+      
       await prisma.rating.create({
         data: {
           userId: customer.id,
           productId: product.id,
-          rating: faker.number.int({ min: 3, max: 5 }),
-          review: faker.lorem.sentence(),
+          rating: faker.number.int({ min: 1, max: 5 }),
+          review: faker.lorem.paragraph(),
+          createdAt: faker.date.past({ years: 1 }),
         },
       });
     }
   }
 
   // --- UPDATE AVERAGE RATINGS ---
-  for (const product of allProducts) {
+  for (const product of products) {
     const avg = await prisma.rating.aggregate({
       where: { productId: product.id },
       _avg: { rating: true },
@@ -253,7 +197,12 @@ async function main() {
     });
   }
 
-  console.log("✅ Seeding complete with fake data!");
+  console.log("✅ Seeding complete with extensive fake data!");
+  console.log(`📊 Created: 
+  - ${users.length} users
+  - ${categories.length} categories
+  - ${products.length} products
+  - Multiple carts, orders, and ratings`);
 }
 
 main()

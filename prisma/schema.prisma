@@ -90,7 +90,6 @@ enum Role {
 enum UserStatus {
   ACTIVE
   INACTIVE
-  DELETED
 }
 
 /// ========================
