@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
-import { registerSchema, RegisterInput } from "@/lib/validators/user";
+import { registerSchema, RegisterInput } from "@/lib/validators/user/user";
 
 import {
   Card,
