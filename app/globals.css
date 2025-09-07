@@ -24,3 +24,17 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.image-fallback {
+  display: none;
+}
+
+/* Smooth image loading */
+img {
+  transition: opacity 0.3s ease;
+}
+
+img[src=""],
+img:not([src]) {
+  opacity: 0;
+}
