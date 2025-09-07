@@ -3,8 +3,8 @@ import { Suspense } from "react";
 
 export default function SignInPage() {
   return (
-      <Suspense>
-        <SignInForm />
-      </Suspense>
+    <Suspense>
+      <SignInForm />
+    </Suspense>
   );
 }
