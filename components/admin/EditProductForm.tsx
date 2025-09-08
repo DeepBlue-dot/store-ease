@@ -123,7 +123,7 @@ export function EditProductForm({ product, categories }: EditProductFormProps) {
       if (!res.ok) {
         throw new Error("Failed to update product");
       }
-      router.replace(`/admin/products/${product.id}/edit`);
+      router.push(`/admin/products/${product.id}/edit`);
     } catch (err) {
       console.error(err);
     } finally {

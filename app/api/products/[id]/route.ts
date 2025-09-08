@@ -21,13 +21,11 @@ const querySchema = z.object({
     .transform((val) => val?.split(",").map((f) => f.trim())),
 });
 
-export async function GET(
-  req: Request,
-  context: { params: Promise<{ id: string }> }
-) {
+
+export async function GET(req: Request, context: Params) {
   const url = new URL(req.url);
   const query = Object.fromEntries(url.searchParams.entries());
-   const { id } = await context.params;
+  const { id } = await context.params;
 
   const parsed = querySchema.safeParse(query);
   if (!parsed.success) {
@@ -36,6 +34,9 @@ export async function GET(
       { status: 400 }
     );
   }
+
+  const session = await getServerSession(authOptions);
+  const isAdmin = session?.user?.role === "ADMIN";
 
   const { select, include } = parsed.data;
 
@@ -64,10 +65,14 @@ export async function GET(
 
   const includeOptions: any = {};
   if (include?.includes("category")) {
-    includeOptions.category = { select: { id: true, name: true, imageUrl: true } };
+    includeOptions.category = {
+      select: { id: true, name: true, imageUrl: true },
+    };
   }
   if (include?.includes("images")) {
-    includeOptions.images = { select: { id: true, url: true, createdAt: true } };
+    includeOptions.images = {
+      select: { id: true, url: true, createdAt: true },
+    };
   }
   if (include?.includes("ratings")) {
     includeOptions.ratings = {
@@ -85,25 +90,25 @@ export async function GET(
     let product;
 
     if (Object.keys(includeOptions).length > 0) {
-      // ✅ Prisma expects include-only
       product = await prisma.product.findUnique({
         where: { id },
         include: includeOptions,
       });
     } else {
-      // ✅ Prisma expects select-only
       product = await prisma.product.findUnique({
         where: { id },
         select: selectFields,
       });
     }
 
-    if (!product) {
+    // ✅ Hide deleted products from non-admins
+    if (!product || (!isAdmin && product.status === "DELETED")) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
     return NextResponse.json(product);
   } catch (err) {
+    console.error("Product fetch error:", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

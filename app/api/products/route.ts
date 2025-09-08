@@ -52,6 +52,9 @@ export async function GET(req: Request) {
     );
   }
 
+  const session = await getServerSession(authOptions);
+  const isAdmin = session?.user?.role === "ADMIN";
+
   const {
     page,
     limit,
@@ -69,13 +72,21 @@ export async function GET(req: Request) {
 
   // Build filters
   const where: any = {};
+
+  // 🚨 Prevent non-admins from ever seeing DELETED products
+  if (!isAdmin) {
+    where.status = { not: "DELETED" };
+  } else if (status) {
+    where.status = status;
+  }
+
   if (search) {
     where.OR = [
       { name: { contains: search, mode: "insensitive" } },
       { description: { contains: search, mode: "insensitive" } },
     ];
   }
-  if (status) where.status = status;
+
   if (categoryId) where.categoryId = categoryId;
   if (minPrice || maxPrice) {
     where.price = {};
@@ -155,6 +166,7 @@ export async function GET(req: Request) {
     },
   });
 }
+
 
 
 const productSchema = z.object({
