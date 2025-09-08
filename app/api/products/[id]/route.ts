@@ -22,7 +22,7 @@ const querySchema = z.object({
 });
 
 
-export async function GET(req: Request, context: Params) {
+export async function GET(req: Request,   context: { params: Promise<{ id: string }> }) {
   const url = new URL(req.url);
   const query = Object.fromEntries(url.searchParams.entries());
   const { id } = await context.params;
