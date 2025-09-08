@@ -3,11 +3,11 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth"; // adjust path to your authOptions
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import cloudinary from "@/lib/cloudinary";
 import fs from "fs";
 import formidable from "formidable";
 import { profileSchema } from "@/lib/validators/user/user";
-import { parseForm } from "@/lib/utils";
+import { uploadImage, deleteImage } from "@/lib/cloudinary";
+import { getPublicIdFromUrl } from "@/lib/cloudinary-utils";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -16,12 +16,13 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Fetch user from DB (in case role/status/email changed after login)
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
     select: {
       id: true,
       name: true,
+      phone: true,
+      address: true,
       email: true,
       role: true,
       status: true,
@@ -33,10 +34,8 @@ export async function GET() {
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
-
   return NextResponse.json(user);
 }
-
 
 export const config = {
   api: {
@@ -46,16 +45,23 @@ export const config = {
 
 export async function PATCH(req: Request) {
   const session = await getServerSession(authOptions);
-
-  if (!session || !session.user?.id) {
+  if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  try {
-    const { fields, files } = await parseForm(req);
+  console.log("PATCH /api/users/me called");
 
-    // Validate text fields
-    const parsed = profileSchema.safeParse(fields);
+  try {
+    const formData = await req.formData();
+
+    // ✅ Extract fields
+    const name = formData.get("name") as string | null;
+    const phone = formData.get("phone") as string | null;
+    const address = formData.get("address") as string | null;
+    const file = formData.get("image") as File | null;
+
+    // ✅ Validate with Zod
+    const parsed = profileSchema.safeParse({ name, phone, address });
     if (!parsed.success) {
       return NextResponse.json(
         { error: parsed.error.flatten() },
@@ -63,25 +69,29 @@ export async function PATCH(req: Request) {
       );
     }
 
+    // ✅ Fetch current user (for old image cleanup)
+    const currentUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { image: true },
+    });
+
     let imageUrl: string | undefined;
 
-    // Handle file upload
-    if (files.image) {
-      const file = Array.isArray(files.image) ? files.image[0] : files.image;
-      if (file?.filepath) {
-        const upload = await cloudinary.uploader.upload(file.filepath, {
-          folder: "profile_images",
-          resource_type: "image",
-        });
+    // ✅ Handle new image upload
+    if (file) {
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      imageUrl = await uploadImage(buffer, "profile_images");
 
-        imageUrl = upload.secure_url;
-
-        // cleanup tmp file
-        fs.unlinkSync(file.filepath);
+      if (currentUser?.image) {
+        const publicId = getPublicIdFromUrl(currentUser.image);
+        if (publicId) {
+          await deleteImage(publicId);
+        }
       }
     }
 
-    // Update DB
+    // ✅ Update DB
     const updatedUser = await prisma.user.update({
       where: { id: session.user.id },
       data: {
@@ -100,7 +110,7 @@ export async function PATCH(req: Request) {
     });
 
     return NextResponse.json(updatedUser);
-  } catch (err: any) {
+  } catch (err) {
     console.error("Profile update error:", err);
     return NextResponse.json(
       { error: "Failed to update profile" },

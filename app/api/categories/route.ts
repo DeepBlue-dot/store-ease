@@ -33,19 +33,30 @@ export async function POST(req: Request) {
   }
 }
 
-// ✅ GET list categories (with products count)
 export async function GET() {
-  const categories = await prisma.category.findMany({
-    select: {
-      id: true,
-      name: true,
-      imageUrl: true,
-      createdAt: true,
-      updatedAt: true,
-      _count: { select: { products: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  try {
+    const categories = await prisma.category.findMany({
+      select: {
+        id: true,
+        name: true,
+        imageUrl: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: { select: { products: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
 
-  return NextResponse.json(categories);
+    return NextResponse.json(
+      { success: true, data: categories },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("GET /api/categories failed:", error);
+
+    return NextResponse.json(
+      { success: false, error: "Failed to fetch categories" },
+      { status: 500 }
+    );
+  }
 }

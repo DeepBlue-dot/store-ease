@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Category, ProductStatus } from "@/lib/generated/prisma";
+import { ProductStatus, Category } from "@/lib/generated/prisma";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,7 +17,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Upload, X } from "lucide-react";
 
@@ -30,14 +36,14 @@ const productSchema = z.object({
   stock: z.string().refine((val) => Number(val) >= 0, {
     message: "Stock must be 0 or more",
   }),
+  status: z.nativeEnum(ProductStatus),
   categoryId: z.string().min(1, "Category is required"),
 });
 
 type ProductFormValues = z.infer<typeof productSchema>;
 
-interface ProductFormProps {
-  categories: Category[];
-  product?: {
+interface EditProductFormProps {
+  product: {
     id: string;
     name: string;
     description: string;
@@ -47,40 +53,48 @@ interface ProductFormProps {
     categoryId: string | null;
     images: { url: string }[];
   };
+  categories: Category[];
 }
 
-export function ProductForm({ categories, product }: ProductFormProps) {
+export function EditProductForm({ product, categories }: EditProductFormProps) {
   const router = useRouter();
-  const [images, setImages] = React.useState<File[]>([]);
-  const [previews, setPreviews] = React.useState<string[]>(
-    product?.images?.map((img) => img.url) ?? []
+  const [newImages, setNewImages] = React.useState<File[]>([]);
+  const [existingImages, setExistingImages] = React.useState(
+    product.images.map((img) => img.url)
   );
+  const [removeImages, setRemoveImages] = React.useState<string[]>([]);
+  const [previews, setPreviews] = React.useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
     defaultValues: {
-      name: product?.name ?? "",
-      description: product?.description ?? "",
-      price: product?.price?.toString() ?? "",
-      stock: product?.stock?.toString() ?? "",
-      categoryId: product?.categoryId ?? "",
+      name: product.name,
+      description: product.description,
+      price: product.price.toString(),
+      stock: product.stock.toString(),
+      status: product.status,
+      categoryId: product.categoryId ?? "",
     },
   });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-    const selected = Array.from(files);
-    setImages((prev) => [...prev, ...selected]);
+    if (!e.target.files) return;
+    const files = Array.from(e.target.files);
+    setNewImages((prev) => [...prev, ...files]);
     setPreviews((prev) => [
       ...prev,
-      ...selected.map((file) => URL.createObjectURL(file)),
+      ...files.map((file) => URL.createObjectURL(file)),
     ]);
   };
 
-  const removeImage = (index: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== index));
+  const removeExistingImage = (url: string) => {
+    setExistingImages((prev) => prev.filter((img) => img !== url));
+    setRemoveImages((prev) => [...prev, url]);
+  };
+
+  const removeNewImage = (index: number) => {
+    setNewImages((prev) => prev.filter((_, i) => i !== index));
     setPreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
@@ -92,23 +106,24 @@ export function ProductForm({ categories, product }: ProductFormProps) {
       formData.append("description", values.description);
       formData.append("price", values.price);
       formData.append("stock", values.stock);
+      formData.append("status", values.status);
       formData.append("categoryId", values.categoryId);
 
-      images.forEach((file) => {
-        formData.append("images", file);
-      });
+      // removed images
+      removeImages.forEach((url) => formData.append("removeImages", url));
 
-      const res = await fetch("/api/products", {
-        method: "POST",
+      // new images
+      newImages.forEach((file) => formData.append("images", file));
+
+      const res = await fetch(`/api/products/${product.id}`, {
+        method: "PATCH",
         body: formData,
       });
 
       if (!res.ok) {
-        throw new Error("Failed to save product");
+        throw new Error("Failed to update product");
       }
-
-      router.push("/admin/products");
-      router.refresh();
+      router.replace(`/admin/products/${product.id}/edit`);
     } catch (err) {
       console.error(err);
     } finally {
@@ -119,7 +134,10 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   return (
     <Card className="p-6">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 text-stone-900">
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="space-y-6 text-black"
+        >
           {/* Name */}
           <FormField
             control={form.control}
@@ -165,34 +183,64 @@ export function ProductForm({ categories, product }: ProductFormProps) {
             />
           </div>
 
-          {/* Category */}
-          <FormField
-            control={form.control}
-            name="categoryId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Category *</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent className="bg-gray-800">
-                    {categories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {/* Status + Category side by side */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status *</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="bg-gray-800">
+                      {Object.values(ProductStatus).map((status) => (
+                        <SelectItem key={status} value={status}>
+                          {status}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="categoryId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Category *</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="bg-gray-800">
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
           {/* Description */}
           <FormField
@@ -209,9 +257,34 @@ export function ProductForm({ categories, product }: ProductFormProps) {
             )}
           />
 
-          {/* Image Upload */}
+          {/* Existing Images */}
+          {existingImages.length > 0 && (
+            <div>
+              <FormLabel>Existing Images</FormLabel>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
+                {existingImages.map((url) => (
+                  <div key={url} className="relative">
+                    <img
+                      src={url}
+                      alt="Existing"
+                      className="w-full h-24 object-cover rounded-lg border"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeExistingImage(url)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
+                    >
+                      <X />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* New Image Upload */}
           <div>
-            <FormLabel>Product Images *</FormLabel>
+            <FormLabel>Upload New Images</FormLabel>
             <div className="mt-2">
               <Input
                 type="file"
@@ -225,9 +298,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
                 type="button"
                 variant="outline"
                 className="text-teal-50"
-                onClick={() =>
-                  document.getElementById("file-upload")?.click()
-                }
+                onClick={() => document.getElementById("file-upload")?.click()}
               >
                 <Upload className="w-4 h-4 mr-2" />
                 Upload Images
@@ -244,7 +315,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
                     />
                     <button
                       type="button"
-                      onClick={() => removeImage(idx)}
+                      onClick={() => removeNewImage(idx)}
                       className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
                     >
                       <X />
@@ -265,8 +336,12 @@ export function ProductForm({ categories, product }: ProductFormProps) {
             >
               Cancel
             </Button>
-            <Button type="submit" className="bg-blue-500 text-amber-50" disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : "Save Product"}
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="bg-blue-500 text-amber-50"
+            >
+              {isSubmitting ? "Updating..." : "Update Product"}
             </Button>
           </div>
         </form>
@@ -274,4 +349,3 @@ export function ProductForm({ categories, product }: ProductFormProps) {
     </Card>
   );
 }
-

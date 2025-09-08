@@ -16,7 +16,10 @@ export const profileSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   phone: z.string().min(7).max(20).optional(),
   address: z.string().max(255).optional(),
+  image: z.any().optional(), // 👈 add this
 });
+
+export type ProfileInput = z.infer<typeof profileSchema>;
 
 export const userquerySchema = z.object({
   page: z

@@ -12,11 +12,13 @@ const categorySchema = z.object({
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
-) {
+  context: { params: Promise<{ id: string }> 
+} )
+ {
   try {
+   const { id } = await context.params;
     const category = await prisma.category.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         name: true,
@@ -39,8 +41,9 @@ export async function GET(
 // ✅ PATCH update category (Admin)
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await context.params;
   const session = await getServerSession(authOptions);
   if (!session || session.user?.role !== "ADMIN") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -55,7 +58,7 @@ export async function PATCH(
 
   try {
     const updated = await prisma.category.update({
-      where: { id: params.id },
+      where: { id },
       data: parsed.data,
     });
     return NextResponse.json(updated);
@@ -67,8 +70,9 @@ export async function PATCH(
 // ✅ DELETE category (Admin)
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await context.params;
   const session = await getServerSession(authOptions);
   if (!session || session.user?.role !== "ADMIN") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -76,7 +80,7 @@ export async function DELETE(
 
   try {
     await prisma.category.delete({
-      where: { id: params.id },
+      where: { id },
     });
     return NextResponse.json({ message: "Category deleted" });
   } catch (err) {

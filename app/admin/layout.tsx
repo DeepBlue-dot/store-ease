@@ -20,11 +20,20 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-screen bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
       <AdminSidebar />
+
+      {/* Main Area */}
       <div className="flex-1 flex flex-col">
+        {/* Header (fixed at top of content area) */}
         <AdminHeader user={session.user} />
-        <main className="flex-1 pt-6 bg-gray-50">{children}</main>
+
+        {/* Scrollable Content */}
+        <main className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
+          <div className="max-w-7xl mx-auto">
+              {children}
+          </div>
+        </main>
       </div>
     </div>
   );

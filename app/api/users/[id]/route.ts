@@ -5,8 +5,10 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
+
 ) {
+  const { id } = await context.params;
   const session = await getServerSession(authOptions);
 
   if (!session || session.user?.role !== "ADMIN") {
@@ -14,7 +16,7 @@ export async function GET(
   }
 
   const user = await prisma.user.findUnique({
-    where: { id: params.id },
+    where: { id },
     select: {
       id: true,
       name: true,
@@ -34,16 +36,14 @@ export async function GET(
   return NextResponse.json(user);
 }
 
-export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
+
   const session = await getServerSession(authOptions);
 
   if (!session || session.user?.role !== "ADMIN") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-
+    const { id } = await context.params;
   const { status } = await req.json();
 
   if (!["ACTIVE", "INACTIVE"].includes(status)) {
@@ -52,7 +52,7 @@ export async function PATCH(
 
   try {
     const updatedUser = await prisma.user.update({
-      where: { id: params.id },
+      where: { id: id },
       data: { status },
       select: {
         id: true,

@@ -14,7 +14,7 @@ export default async function CreateProductPage() {
         </h2>
       </div>
 
-      <div className="bg-white p-6 rounded-lg shadow">
+      <div >
         <ProductForm categories={categories} />
       </div>
     </div>

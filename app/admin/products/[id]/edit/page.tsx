@@ -1,46 +1,42 @@
-import { prisma } from "@/lib/prisma";
-import { ProductForm } from "@/components/admin/ProductForm";
-import { notFound } from "next/navigation";
+// app/admin/products/[id]/edit/page.tsx
 
-interface Props {
+import { prisma } from "@/lib/prisma";
+import { notFound } from "next/navigation";
+import { EditProductForm } from "@/components/admin/EditProductForm";
+
+interface PageProps {
   params: { id: string };
 }
 
-export default async function EditProductPage({ params }: Props) {
-  const [product, categories] = await Promise.all([
-    prisma.product.findUnique({
-      where: { id: params.id },
-      include: {
-        images: true,
-        category: true,
-      },
-    }),
-    prisma.category.findMany({
-      orderBy: { name: "asc" },
-    }),
-  ]);
+export default async function EditProductPage({ params }: PageProps) {
+  const { id } = params;
 
-  if (!product) {
-    notFound();
-  }
+  const product = await prisma.product.findUnique({
+    where: { id },
+    include: {
+      images: true,
+      category: true,
+    },
+  });
 
-  // Convert Decimal to number for client component serialization
-  const serializableProduct = {
+  if (!product) return notFound();
+
+  // ✅ Convert Prisma Decimal → number
+  const safeProduct = {
     ...product,
-    price: product.price.toNumber(), // Convert Decimal to number
+    price: product.price.toNumber(),
+    images: product.images.map((img) => ({ url: img.url })), // ✅ match form prop type
+    categoryId: product.categoryId ?? null,
   };
 
-  return (
-    <div className="flex-1 space-y-4 p-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-3xl text-black font-bold tracking-tight">
-          Edit Product
-        </h2>
-      </div>
+  const categories = await prisma.category.findMany({
+    orderBy: { createdAt: "desc" },
+  });
 
-      <div className="bg-white p-6 rounded-lg shadow">
-        <ProductForm product={serializableProduct} categories={categories} />
-      </div>
+  return (
+    <div className="max-w-3xl mx-auto py-10">
+      <h1 className="text-2xl font-bold mb-6 text-blue-950">Edit Product</h1>
+      <EditProductForm product={safeProduct} categories={categories} />
     </div>
   );
 }
