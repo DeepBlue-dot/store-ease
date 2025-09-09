@@ -22,7 +22,7 @@ model User {
   status        UserStatus @default(ACTIVE)
   phone         String?
   address       String?
-  image         String?
+  image         String?    @default("https://res.cloudinary.com/de6k3avew/image/upload/v1757376259/default_profile_dubdux.jpg")
   emailVerified DateTime?
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
