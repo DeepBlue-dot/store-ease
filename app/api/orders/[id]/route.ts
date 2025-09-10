@@ -60,7 +60,7 @@ export async function GET(
   context: { params: { id: string } }
 ) {
   try {
-    const { id } = context.params;
+    const { id } = await context.params;
 
     const session = await getServerSession(authOptions);
     if (!session) {
