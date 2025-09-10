@@ -57,7 +57,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
 
 export async function GET(
   req: Request,
-  context: { params: { id: string } }
+context: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await context.params;
