@@ -102,13 +102,15 @@ export async function POST(req: Request) {
 export async function GET(req: Request) {
   try {
     const session = await getServerSession();
-    if (!session || session.user.role !== "CUSTOMER") {
+    if (!session || session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Parse query params
     const { searchParams } = new URL(req.url);
+
     const status = searchParams.get("status"); // optional
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
     const page = parseInt(searchParams.get("page") || "1", 10);
     const limit = parseInt(searchParams.get("limit") || "10", 10);
 
@@ -117,9 +119,12 @@ export async function GET(req: Request) {
     }
 
     // Build filters
-    const where: any = { userId: session.user.id };
-    if (status) {
-      where.status = status;
+    const where: any = {};
+    if (status) where.status = status;
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate) where.createdAt.gte = new Date(startDate);
+      if (endDate) where.createdAt.lte = new Date(endDate);
     }
 
     // Count total
@@ -132,6 +137,9 @@ export async function GET(req: Request) {
       skip: (page - 1) * limit,
       take: limit,
       include: {
+        user: {
+          select: { id: true, name: true, email: true },
+        },
         items: {
           include: {
             product: {
@@ -139,7 +147,7 @@ export async function GET(req: Request) {
                 id: true,
                 name: true,
                 price: true,
-                images: { take: 1 }, // get first image
+                images: { take: 1 },
               },
             },
           },
