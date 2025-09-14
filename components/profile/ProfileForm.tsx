@@ -1,51 +1,38 @@
-"use client";
+"use client"
 
-import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import axios from "axios";
-import { useState, useEffect } from "react";
-import { profileSchema } from "@/lib/validators/user/user";
-import { z } from "zod";
+import { useForm, Controller } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import axios from "axios"
+import { useState } from "react"
+import { profileSchema } from "@/lib/validators/user/user"
+import type { z } from "zod"
 
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card";
-import { toast } from "sonner";
-import Image from "next/image";
-import { Loader2 } from "lucide-react";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
+import { toast } from "sonner"
+import Image from "next/image"
+import { Loader2 } from "lucide-react"
 
 type ProfileInput = z.infer<typeof profileSchema> & {
-  image?: FileList;
-};
+  image?: FileList
+}
 
 interface ProfileFormProps {
   user: {
-    id: string;
-    name?: string | null;
-    phone?: string | null;
-    address?: string | null;
-    image?: string | null;
-  };
-  onUpdate: (data: any) => void;
+    id: string
+    name?: string | null
+    phone?: string | null
+    address?: string | null
+    image?: string | null
+  }
+  onUpdate: (data: any) => void
 }
 
-export default function ProfileForm({ user, onUpdate }: ProfileFormProps) {
-  const [loading, setLoading] = useState(false);
-  const [preview, setPreview] = useState<string | null>(user.image || null);
+const ProfileForm = ({ user, onUpdate }: ProfileFormProps) => {
+  const [loading, setLoading] = useState(false)
+  const [preview, setPreview] = useState<string | null>(user.image || null)
 
   const form = useForm<ProfileInput>({
     resolver: zodResolver(profileSchema),
@@ -54,67 +41,67 @@ export default function ProfileForm({ user, onUpdate }: ProfileFormProps) {
       phone: user.phone ?? "",
       address: user.address ?? "",
     },
-  });
+  })
 
   const onSubmit = async (values: ProfileInput) => {
     try {
-      setLoading(true);
+      setLoading(true)
 
-      const formData = new FormData();
-      if (values.name) formData.append("name", values.name);
-      if (values.phone) formData.append("phone", values.phone);
-      if (values.address) formData.append("address", values.address);
-      if (values.image?.[0]) formData.append("image", values.image[0]);
+      const formData = new FormData()
+      if (values.name) formData.append("name", values.name)
+      if (values.phone) formData.append("phone", values.phone)
+      if (values.address) formData.append("address", values.address)
+      if (values.image?.[0]) formData.append("image", values.image[0])
 
       const res = await axios.patch("/api/users/me", formData, {
         headers: { "Content-Type": "multipart/form-data" },
-      });
+      })
 
-      onUpdate(res.data);
-      toast.success("✅ Profile updated successfully");
+      onUpdate(res.data)
+      toast.success("✅ Profile updated successfully")
     } catch (err: any) {
-      console.error("Profile update failed:", err);
-      toast.error(err.response?.data?.error || "Failed to update profile");
+      console.error("Profile update failed:", err)
+      toast.error(err.response?.data?.error || "Failed to update profile")
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
-    <Card className="max-w-lg mx-auto rounded-2xl shadow-md border border-gray-200">
-      <CardHeader>
-        <CardTitle className="text-xl font-semibold text-gray-900">
+    <Card className="shadow-lg rounded-3xl border-0 bg-gradient-to-br from-blue-50 to-white">
+      <CardHeader className="pb-6">
+        <CardTitle className="text-2xl font-bold text-slate-900 flex items-center gap-3">
+          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+            <span className="text-blue-600 text-sm">✏️</span>
+          </div>
           Edit Profile
         </CardTitle>
-        <CardDescription className="text-sm text-gray-600">
+        <CardDescription className="text-slate-600 leading-relaxed">
           Update your personal information and profile picture
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="space-y-6"
-          >
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Profile Image Upload with Preview */}
             <Controller
               control={form.control}
               name="image"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Profile Image</FormLabel>
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-100 border border-gray-300 flex items-center justify-center">
+                  <FormLabel className="text-slate-700 font-medium">Profile Image</FormLabel>
+                  <div className="flex items-center gap-6">
+                    <div className="w-20 h-20 rounded-full overflow-hidden bg-slate-100 border-4 border-white shadow-lg flex items-center justify-center">
                       {preview ? (
                         <Image
-                          src={preview}
+                          src={preview || "/placeholder.svg"}
                           alt="Profile preview"
-                          width={64}
-                          height={64}
+                          width={80}
+                          height={80}
                           className="object-cover w-full h-full"
                         />
                       ) : (
-                        <span className="text-gray-400 text-sm">No Image</span>
+                        <span className="text-slate-400 text-xs">No Image</span>
                       )}
                     </div>
                     <FormControl>
@@ -122,12 +109,12 @@ export default function ProfileForm({ user, onUpdate }: ProfileFormProps) {
                         type="file"
                         accept="image/*"
                         onChange={(e) => {
-                          field.onChange(e.target.files);
+                          field.onChange(e.target.files)
                           if (e.target.files?.[0]) {
-                            setPreview(URL.createObjectURL(e.target.files[0]));
+                            setPreview(URL.createObjectURL(e.target.files[0]))
                           }
                         }}
-                        className="text-sm"
+                        className="text-sm rounded-xl border-slate-200 focus:border-blue-400 focus:ring-blue-400"
                       />
                     </FormControl>
                   </div>
@@ -142,12 +129,12 @@ export default function ProfileForm({ user, onUpdate }: ProfileFormProps) {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel className="text-slate-700 font-medium">Name</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="Your name"
                       {...field}
-                      className="rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      className="rounded-xl border-slate-200 focus:border-blue-400 focus:ring-blue-400 h-12"
                     />
                   </FormControl>
                   <FormMessage />
@@ -161,12 +148,12 @@ export default function ProfileForm({ user, onUpdate }: ProfileFormProps) {
               name="phone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Phone</FormLabel>
+                  <FormLabel className="text-slate-700 font-medium">Phone</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="Phone number"
                       {...field}
-                      className="rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      className="rounded-xl border-slate-200 focus:border-blue-400 focus:ring-blue-400 h-12"
                     />
                   </FormControl>
                   <FormMessage />
@@ -180,12 +167,12 @@ export default function ProfileForm({ user, onUpdate }: ProfileFormProps) {
               name="address"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Address</FormLabel>
+                  <FormLabel className="text-slate-700 font-medium">Address</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="Address"
                       {...field}
-                      className="rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      className="rounded-xl border-slate-200 focus:border-blue-400 focus:ring-blue-400 h-12"
                     />
                   </FormControl>
                   <FormMessage />
@@ -197,7 +184,7 @@ export default function ProfileForm({ user, onUpdate }: ProfileFormProps) {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl h-12 font-medium shadow-lg"
             >
               {loading ? (
                 <>
@@ -212,5 +199,7 @@ export default function ProfileForm({ user, onUpdate }: ProfileFormProps) {
         </Form>
       </CardContent>
     </Card>
-  );
+  )
 }
+
+export default ProfileForm

@@ -6,43 +6,50 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
 const querySchema = z.object({
-  page: z.preprocess((val) => Number(val), z.number().int().min(1).default(1)),
-  limit: z.preprocess(
-    (val) => Number(val),
-    z.number().int().min(1).max(100).default(10)
-  ),
+  page: z
+    .preprocess((val) => {
+      const n = Number(val);
+      return isNaN(n) ? 1 : n; // default to 1
+    }, z.number().int().min(1)),
+  
+  limit: z
+    .preprocess((val) => {
+      const n = Number(val);
+      return isNaN(n) ? 10 : n; // default to 10
+    }, z.number().int().min(1).max(100)),
 
   search: z.string().optional(),
   status: z.enum(["ACTIVE", "INACTIVE", "DISCONTINUED", "DELETED"]).optional(),
   categoryId: z.string().uuid().optional(),
+
   minPrice: z
-    .string()
-    .regex(/^\d+(\.\d+)?$/)
-    .transform(Number)
-    .optional(),
+    .preprocess((val) => (val ? Number(val) : undefined), z.number().optional()),
   maxPrice: z
-    .string()
-    .regex(/^\d+(\.\d+)?$/)
-    .transform(Number)
-    .optional(),
+    .preprocess((val) => (val ? Number(val) : undefined), z.number().optional()),
+
   inStock: z.enum(["true", "false"]).optional(),
+  
   select: z
     .string()
     .optional()
-    .transform((val) => val?.split(",").map((f) => f.trim())),
+    .transform((val) => val?.split(",").map((f) => f.trim()) ?? []),
+  
   include: z
     .string()
     .optional()
-    .transform((val) => val?.split(",").map((f) => f.trim())),
+    .transform((val) => val?.split(",").map((f) => f.trim()) ?? []),
+
   sortBy: z
     .enum(["name", "price", "stock", "createdAt", "updatedAt", "averageRating"])
     .default("createdAt"),
   order: z.enum(["asc", "desc"]).default("desc"),
 });
 
+
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const query = Object.fromEntries(url.searchParams.entries());
+  console.log("Raw query params:", query);
 
   const parsed = querySchema.safeParse(query);
   if (!parsed.success) {
@@ -167,13 +174,17 @@ export async function GET(req: Request) {
   });
 }
 
-
-
 const productSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().min(1, "Description is required"),
-  price: z.preprocess((val) => Number(val), z.number().positive("Price must be positive")),
-  stock: z.preprocess((val) => Number(val), z.number().int().nonnegative("Stock must be 0 or more")),
+  price: z.preprocess(
+    (val) => Number(val),
+    z.number().positive("Price must be positive")
+  ),
+  stock: z.preprocess(
+    (val) => Number(val),
+    z.number().int().nonnegative("Stock must be 0 or more")
+  ),
   categoryId: z.string().uuid().optional(),
 });
 
@@ -232,6 +243,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: error.issues }, { status: 400 });
     }
 
-    return NextResponse.json({ error: "Failed to create product" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to create product" },
+      { status: 500 }
+    );
   }
 }

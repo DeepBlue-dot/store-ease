@@ -1,75 +1,71 @@
-"use client";
+"use client"
 
-import { useForm } from "react-hook-form";
-import axios from "axios";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { z } from "zod";
-import { toast } from "sonner";
-import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { useForm } from "react-hook-form"
+import axios from "axios"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
+import { z } from "zod"
+import { toast } from "sonner"
+import { useState } from "react"
+import { Loader2 } from "lucide-react"
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, "Current password is required"),
   newPassword: z.string().min(8, "Password must be at least 8 characters"),
-});
+})
 
-export default function PasswordForm() {
-  const [loading, setLoading] = useState(false);
+function PasswordForm() {
+  const [loading, setLoading] = useState(false)
 
   const form = useForm({
     resolver: zodResolver(passwordSchema),
     defaultValues: { currentPassword: "", newPassword: "" },
-  });
+  })
 
   async function onSubmit(values: any) {
     try {
-      setLoading(true);
-      await axios.patch("/api/users/me/password", values);
-      form.reset();
-      toast.success("✅ Password updated successfully");
+      setLoading(true)
+      await axios.patch("/api/users/me/password", values)
+      form.reset()
+      toast.success("✅ Password updated successfully")
     } catch (error: any) {
-      console.error(error);
-      toast.error(error.response?.data?.error || "Failed to update password");
+      console.error(error)
+      toast.error(error.response?.data?.error || "Failed to update password")
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   }
 
   return (
-    <Card className="max-w-md mx-auto shadow-md rounded-2xl border border-gray-200 min-w-100">
-      <CardHeader>
-        <CardTitle className="text-xl font-semibold text-gray-900">
+    <Card className="shadow-lg rounded-3xl border-0 bg-gradient-to-br from-red-50 to-white">
+      <CardHeader className="pb-6">
+        <CardTitle className="text-2xl font-bold text-slate-900 flex items-center gap-3">
+          <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+            <span className="text-red-600 text-sm">🔒</span>
+          </div>
           Change Password
         </CardTitle>
-        <CardDescription className="text-sm text-gray-600">
+        <CardDescription className="text-slate-600 leading-relaxed">
           Ensure your account is using a strong, unique password to stay secure.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               name="currentPassword"
               control={form.control}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Current Password</FormLabel>
+                  <FormLabel className="text-slate-700 font-medium">Current Password</FormLabel>
                   <FormControl>
                     <Input
                       type="password"
                       placeholder="Enter current password"
-                      className="rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      className="rounded-xl border-slate-200 focus:border-red-400 focus:ring-red-400 h-12"
                       {...field}
                     />
                   </FormControl>
@@ -83,12 +79,12 @@ export default function PasswordForm() {
               control={form.control}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>New Password</FormLabel>
+                  <FormLabel className="text-slate-700 font-medium">New Password</FormLabel>
                   <FormControl>
                     <Input
                       type="password"
                       placeholder="Enter new password"
-                      className="rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      className="rounded-xl border-slate-200 focus:border-red-400 focus:ring-red-400 h-12"
                       {...field}
                     />
                   </FormControl>
@@ -99,7 +95,7 @@ export default function PasswordForm() {
 
             <Button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+              className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-xl h-12 font-medium shadow-lg"
               disabled={loading}
             >
               {loading ? (
@@ -115,5 +111,7 @@ export default function PasswordForm() {
         </Form>
       </CardContent>
     </Card>
-  );
+  )
 }
+
+export default PasswordForm

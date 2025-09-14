@@ -1,10 +1,16 @@
+"use client"
+import { CategorySection } from "@/components/common/CategorySection";
+import { HeroSection } from "@/components/common/hero-section";
+import { PromotionalSection } from "@/components/common/promotional-section";
+import { ProductGrid } from "@/components/products/ProductGrid";
+
 export default function HomePage() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen py-2">
-      <h1 className="text-4xl font-bold mb-4">HomePage</h1>
-      <p className="text-lg text-gray-700">
-        This is the home page of your Next.js application.
-      </p>
+    <div >
+    <HeroSection/>
+    <CategorySection/>
+    <ProductGrid/>
+    <PromotionalSection/>
     </div>
   );
 }
