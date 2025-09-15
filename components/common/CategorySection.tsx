@@ -1,9 +1,10 @@
 "use client"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import axios from "axios"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 
 type Category = {
   id: string
@@ -13,14 +14,16 @@ type Category = {
 }
 
 export function CategorySection() {
+  const router = useRouter()
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         const res = await axios.get("/api/categories", {
-          params: { page: 1, limit: 6, sortBy: "createdAt", order: "desc" },
+          params: { page: 1, limit: 20, sortBy: "createdAt", order: "desc" },
         })
         if (res.data.success) {
           setCategories(res.data.data)
@@ -31,9 +34,22 @@ export function CategorySection() {
         setLoading(false)
       }
     }
-
     fetchCategories()
   }, [])
+
+  const scroll = (direction: "left" | "right") => {
+    if (!scrollRef.current) return
+    const scrollAmount = scrollRef.current.clientWidth / 2
+    scrollRef.current.scrollBy({
+      left: direction === "left" ? -scrollAmount : scrollAmount,
+      behavior: "smooth",
+    })
+  }
+
+  // Redirect when a category is clicked
+  const handleCategoryClick = (categoryId: string) => {
+    router.push(`/shop?categoryId=${categoryId}`)
+  }
 
   return (
     <section className="py-16 px-4 bg-gray-50">
@@ -41,11 +57,21 @@ export function CategorySection() {
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-2xl font-semibold text-gray-900">Browse By Category</h2>
           <div className="flex gap-2">
-            <Button variant="outline" size="icon" className="h-10 w-10 bg-transparent">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 bg-transparent"
+              onClick={() => scroll("left")}
+            >
               <ChevronLeft className="h-4 w-4" />
               <span className="sr-only">Previous categories</span>
             </Button>
-            <Button variant="outline" size="icon" className="h-10 w-10 bg-transparent">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 bg-transparent"
+              onClick={() => scroll("right")}
+            >
               <ChevronRight className="h-4 w-4" />
               <span className="sr-only">Next categories</span>
             </Button>
@@ -55,11 +81,15 @@ export function CategorySection() {
         {loading ? (
           <p className="text-gray-500">Loading categories...</p>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+          <div
+            ref={scrollRef}
+            className="flex gap-6 overflow-x-auto scrollbar-hide"
+          >
             {categories.map((category) => (
               <div
                 key={category.id}
-                className="flex flex-col items-center p-6 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all duration-200 cursor-pointer group"
+                onClick={() => handleCategoryClick(category.id)}
+                className="flex-shrink-0 flex flex-col items-center p-6 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all duration-200 cursor-pointer group w-40"
               >
                 <div className="mb-4 p-4 bg-gray-100 rounded-full group-hover:bg-gray-200 transition-colors flex items-center justify-center">
                   {category.imageUrl ? (

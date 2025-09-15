@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { deleteImages, uploadImage } from "@/lib/cloudinary";
-import { isCloudinaryUrl } from "@/lib/cloudinary-utils";
 import { z } from "zod";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -22,7 +21,7 @@ const querySchema = z.object({
 });
 
 
-export async function GET(req: Request,   context: { params: Promise<{ id: string }> }) {
+export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
   const url = new URL(req.url);
   const query = Object.fromEntries(url.searchParams.entries());
   const { id } = await context.params;
