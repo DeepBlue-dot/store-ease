@@ -5,7 +5,7 @@ export function HeroSection() {
     <section className="relative bg-gray-900 text-white min-h-[600px] flex items-center">
       <div className="absolute inset-0 bg-gray-900">
         <img
-          src="/iphone-14-pro-hero-image-dark-background.jpg"
+          src="/iphone.jpg"
           alt="iPhone 14 Pro"
           className="w-full h-full object-cover"
         />
