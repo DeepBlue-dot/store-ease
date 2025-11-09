@@ -1,8 +1,8 @@
-import { PrismaClient, Prisma } from "../lib/generated/prisma";
+import { Prisma } from "../lib/generated/prisma";
 import bcrypt from "bcryptjs";
 import { faker } from "@faker-js/faker";
+import { prisma } from "@/lib/prisma";
 
-const prisma = new PrismaClient();
 
 async function main() {
   console.log("🧹 Cleaning up existing data...");

@@ -1,62 +1,91 @@
-import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { prisma } from "@/lib/prisma"
 import { authOptions } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
+import { getServerSession } from "next-auth"
+import { NextRequest, NextResponse } from "next/server"
+import { z, ZodError } from "zod"
 
-export async function PATCH(
-  req: Request,
-  context: { params: Promise<{ id: string }> } // ✅ Must be a Promise
-) {
-  const { id } = await context.params // ✅ await the promise
-  if (!id) return NextResponse.json({ error: "Missing cart item ID" }, { status: 400 })
+// Zod schemas
+const paramsSchema = z.object({
+  id: z.string().uuid("Invalid cart item ID"),
+})
 
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+const updateCartItemSchema = z.object({
+  quantity: z.number().min(1, "Quantity must be at least 1"),
+})
 
-  const body = await req.json()
-  const { quantity } = body
-  if (typeof quantity !== "number" || quantity < 1)
-    return NextResponse.json({ error: "Invalid quantity" }, { status: 400 })
-
-  const cartItem = await prisma.cartItem.findUnique({
-    where: { id },
-    include: { cart: true, product: true },
-  })
-  if (!cartItem) return NextResponse.json({ error: "Cart item not found" }, { status: 404 })
-
-  const cartOwner = await prisma.user.findUnique({ where: { id: cartItem.cart.userId } })
-  if (cartOwner?.email !== session.user.email)
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
-
-  const maxQuantity = Math.min(quantity, cartItem.product.stock)
-  const updatedItem = await prisma.cartItem.update({
-    where: { id },
-    data: { qty: maxQuantity },
-  })
-
-  return NextResponse.json({ message: "Cart item updated", item: updatedItem })
+// Helper: centralized error response
+function handleError(err: unknown) {
+  if (err instanceof ZodError) {
+    // Use `issues` instead of `errors`
+    return NextResponse.json(
+      { error: err.issues[0]?.message || "Invalid input" },
+      { status: 400 }
+    )
+  }
+  if (err instanceof Error && err.message.includes("P2002")) {
+    return NextResponse.json({ error: "Database constraint violation" }, { status: 400 })
+  }
+  console.error("Unexpected error:", err)
+  return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
 }
 
-export async function DELETE(
-  req: Request,
-  context: { params: Promise<{ id: string }> } // ✅ Must be Promise
-) {
-  const { id } = await context.params
-  if (!id) return NextResponse.json({ error: "Missing cart item ID" }, { status: 400 })
-
+// Helper: get session or fail
+async function getSessionOrFail() {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (!session?.user?.email) throw new Error("Unauthorized")
+  return session.user.email
+}
 
+// Helper: fetch and authorize cart item
+async function getAuthorizedCartItem(cartItemId: string, userEmail: string) {
   const cartItem = await prisma.cartItem.findUnique({
-    where: { id },
-    include: { cart: true },
+    where: { id: cartItemId },
+    include: { cart: true, product: true },
   })
-  if (!cartItem) return NextResponse.json({ error: "Cart item not found" }, { status: 404 })
+
+  if (!cartItem) throw new Error("Cart item not found")
 
   const cartOwner = await prisma.user.findUnique({ where: { id: cartItem.cart.userId } })
-  if (cartOwner?.email !== session.user.email)
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  if (!cartOwner || cartOwner.email !== userEmail) throw new Error("Forbidden")
 
-  await prisma.cartItem.delete({ where: { id } })
-  return NextResponse.json({ message: "Item removed from cart" })
+  return cartItem
+}
+
+// DELETE /api/cart/[id]
+export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await context.params
+    paramsSchema.parse({ id })
+
+    const email = await getSessionOrFail()
+    const cartItem = await getAuthorizedCartItem(id, email)
+
+    await prisma.cartItem.delete({ where: { id: cartItem.id } })
+    return NextResponse.json({ message: "Item removed from cart" })
+  } catch (err) {
+    return handleError(err)
+  }
+}
+
+// PATCH /api/cart/[id]
+export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await context.params
+    paramsSchema.parse({ id })
+
+    const email = await getSessionOrFail()
+    const body = updateCartItemSchema.parse(await req.json())
+
+    const cartItem = await getAuthorizedCartItem(id, email)
+    const maxQuantity = Math.min(body.quantity, cartItem.product.stock)
+
+    const updatedItem = await prisma.cartItem.update({
+      where: { id: cartItem.id },
+      data: { qty: maxQuantity },
+    })
+
+    return NextResponse.json({ message: "Cart item updated", item: updatedItem })
+  } catch (err) {
+    return handleError(err)
+  }
 }

@@ -1,62 +1,59 @@
-// app/api/ratings/[id]/route.ts
-
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
+import { z, ZodError } from "zod";
 
-export async function GET(
-  req: Request,
- context: { params: Promise<{ id: string }> }
-) {
-  const { id: productId } = await context.params;
+// Zod schemas
+const paramsSchema = z.object({
+  id: z.string().uuid("Invalid product ID"),
+});
 
-  if (!productId) {
-    return NextResponse.json(
-      { error: "Product ID is required" },
-      { status: 400 }
-    );
+const ratingSchema = z.object({
+  rating: z.number().min(1).max(5),
+  review: z.string().optional(),
+});
+
+// Centralized error handler
+function handleError(err: unknown) {
+  if (err instanceof ZodError) {
+    return NextResponse.json({ error: err.issues[0]?.message }, { status: 400 });
   }
+  console.error(err);
+  return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+}
 
+// GET ratings
+export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    // Parse query params for pagination
+    const { id: productId } = await context.params;
+    paramsSchema.parse({ id: productId });
+
     const url = new URL(req.url);
     const page = parseInt(url.searchParams.get("page") || "1");
     const limit = parseInt(url.searchParams.get("limit") || "10");
     const skip = (page - 1) * limit;
 
-    // Fetch paginated reviews
     const [reviews, totalCount, avgRating] = await Promise.all([
       prisma.rating.findMany({
         where: { productId },
         orderBy: { createdAt: "desc" },
         skip,
         take: limit,
-        select: {
-          id: true,
-          rating: true,
-          review: true,
-          createdAt: true,
-          user: { select: { name: true } },
-        },
+        select: { id: true, rating: true, review: true, createdAt: true, user: { select: { name: true } } },
       }),
       prisma.rating.count({ where: { productId } }),
-      prisma.rating.aggregate({
-        where: { productId },
-        _avg: { rating: true },
-      }),
+      prisma.rating.aggregate({ where: { productId }, _avg: { rating: true } }),
     ]);
 
-    const formattedReviews = reviews.map((r) => ({
-      id: r.id,
-      rating: r.rating,
-      review: r.review,
-      createdAt: r.createdAt.toISOString(),
-      user: r.user,
-    }));
-
     return NextResponse.json({
-      data: formattedReviews,
+      data: reviews.map(r => ({
+        id: r.id,
+        rating: r.rating,
+        review: r.review,
+        createdAt: r.createdAt.toISOString(),
+        user: r.user,
+      })),
       meta: {
         total: totalCount,
         page,
@@ -66,109 +63,58 @@ export async function GET(
       },
     });
   } catch (err) {
-    console.error("Failed to fetch reviews:", err);
-    return NextResponse.json(
-      { error: "Failed to fetch reviews" },
-      { status: 500 }
-    );
+    return handleError(err);
   }
 }
 
-export async function POST(
-  req: Request,
- context: { params: Promise<{ id: string }> }
-) {
-  const { id: productId } = await context.params;
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { rating, review } = await req.json();
-  if (!rating || rating < 1 || rating > 5) {
-    return NextResponse.json(
-      { error: "Invalid rating value" },
-      { status: 400 }
-    );
-  }
-
+// POST rating
+export async function POST(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    // Find user
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
-    if (!user)
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    const { id: productId } = await context.params;
+    paramsSchema.parse({ id: productId });
 
-    // Upsert rating
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const body = ratingSchema.parse(await req.json());
+    const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+    if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
     const newRating = await prisma.rating.upsert({
       where: { userId_productId: { userId: user.id, productId } },
-      update: { rating, review },
-      create: { userId: user.id, productId, rating, review },
+      update: { rating: body.rating, review: body.review },
+      create: { userId: user.id, productId, rating: body.rating, review: body.review },
       include: { user: { select: { name: true } } },
     });
 
-    // Update product average rating
-    const agg = await prisma.rating.aggregate({
-      where: { productId },
-      _avg: { rating: true },
-    });
-
-    await prisma.product.update({
-      where: { id: productId },
-      data: { averageRating: agg._avg.rating || 0 },
-    });
+    const agg = await prisma.rating.aggregate({ where: { productId }, _avg: { rating: true } });
+    await prisma.product.update({ where: { id: productId }, data: { averageRating: agg._avg.rating || 0 } });
 
     return NextResponse.json(newRating);
   } catch (err) {
-    console.error(err);
-    return NextResponse.json(
-      { error: "Failed to submit rating" },
-      { status: 500 }
-    );
+    return handleError(err);
   }
 }
 
-export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  const { id: productId } = params;
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+// DELETE rating
+export async function DELETE(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
-    if (!user)
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    const { id: productId } = await context.params;
+    paramsSchema.parse({ id: productId });
 
-    await prisma.rating.delete({
-      where: { userId_productId: { userId: user.id, productId } },
-    });
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    // Recalculate average rating
-    const agg = await prisma.rating.aggregate({
-      where: { productId },
-      _avg: { rating: true },
-    });
+    const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+    if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-    await prisma.product.update({
-      where: { id: productId },
-      data: { averageRating: agg._avg.rating || 0 },
-    });
+    await prisma.rating.delete({ where: { userId_productId: { userId: user.id, productId } } });
+
+    const agg = await prisma.rating.aggregate({ where: { productId }, _avg: { rating: true } });
+    await prisma.product.update({ where: { id: productId }, data: { averageRating: agg._avg.rating || 0 } });
 
     return NextResponse.json({ message: "Rating deleted" });
   } catch (err) {
-    console.error(err);
-    return NextResponse.json(
-      { error: "Failed to delete rating" },
-      { status: 500 }
-    );
+    return handleError(err);
   }
 }
