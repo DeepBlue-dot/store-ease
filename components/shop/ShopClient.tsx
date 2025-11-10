@@ -111,6 +111,7 @@ export default function ProductsPage() {
         if (priceRange[1] < 2000)
           params.append("maxPrice", priceRange[1].toString());
         if (inStockOnly) params.append("inStock", "true");
+        params.append("include", "images");
 
         const response = await axios.get<ProductsResponse>(
           `/api/products?${params}`
