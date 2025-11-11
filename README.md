@@ -10,7 +10,6 @@
 
 🔗 **Live Demo:** [https://store-ease-alpha.vercel.app/](https://store-ease-alpha.vercel.app/)  
 🔗 **GitHub Repository:** [StoreEase on GitHub](https://github.com/DeepBlue-dot/store-ease)  
-🔗 **GitHub Invite:** *(Replace this with your invite link)*
 
 ---
 
