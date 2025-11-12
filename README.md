@@ -1,4 +1,4 @@
-# 🛍️ StoreEase - Single-Vendor E-commerce (MVP)
+# 🛍️ StoreEase - Single-Vendor E-commerce
 
 ![StoreEase Logo](https://store-ease-alpha.vercel.app/logo.png)
 
